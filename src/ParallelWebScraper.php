@@ -120,21 +120,21 @@ class ParallelWebScraper
      */
     private function processQueue(?callable $onComplete, ?callable $onProgress): void
     {
-        while (!empty($this->queue) || !empty($this->activeRequests)) {
-            // Preenche slots disponíveis
-            while (count($this->activeRequests) < $this->maxConcurrent && !empty($this->queue)) {
-                $url = array_shift($this->queue);
-                $this->fetchUrl($url, $onComplete, $onProgress);
-            }
-
-            $this->loop->next();
-
-            // Micro sleep para evitar CPU 100%
-            usleep(100);
+        while (count($this->activeRequests) < $this->maxConcurrent && !empty($this->queue)) {
+            $url = array_shift($this->queue);
+            $this->fetchUrl($url, $onComplete, $onProgress);
         }
 
-        $this->loop->stop();
+        // se acabou tudo, finaliza loop
+        if (empty($this->queue) && empty($this->activeRequests)) {
+            $this->loop->stop();
+            return;
+        }
+
+        // agenda próxima verificação
+        $this->loop->defer(fn() => $this->processQueue($onComplete, $onProgress));
     }
+
 
     /**
      * Faz requisição HTTP de uma URL
