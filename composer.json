@@ -1,0 +1,40 @@
+{
+  "name": "omegaalfa/fiber-eventloop",
+  "description": "A lightweight, high-performance fiber-based event loop for modern PHP applications. Enables asynchronous I/O with synchronous-like syntax.",
+  "type": "library",
+  "license": "MIT",
+  "keywords": [
+    "event-loop",
+    "fiber",
+    "asynchronous",
+    "async",
+    "coroutine",
+    "non-blocking",
+    "io",
+    "tcp",
+    "concurrent"
+  ],
+  "authors": [
+    {
+      "name": "wrt",
+      "email": "webdesenvolver.agenda@gmail.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "Omegaalfa\\FiberEventLoop\\": "src/"
+    }
+  },
+  "minimum-stability": "dev",
+  "require-dev": {
+    "roave/security-advisories": "dev-latest",
+    "revolt/event-loop": "^1.0@dev",
+    "phpunit/phpunit": "^11.5"
+  },
+  "scripts": {
+    "test": "phpunit"
+  }
+}
