@@ -77,14 +77,14 @@ php -m | grep sockets
 ### Via Composer (recomendado)
 
 ```bash
-composer require omegaalfa/fiber-eventloop
+composer require omegaalfa/fiber-event-loop
 ```
 
 ### Manual
 
 ```bash
-git clone https://github.com/omegaalfa/fiber-eventloop.git
-cd fiber-eventloop
+git clone https://github.com/omegaalfa/FiberEventLoop.git
+cd fiber-event-loop
 composer install
 ```
 
@@ -761,8 +761,8 @@ Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICE
 
 ## 📞 Suporte
 
-- 🐛 **Issues:** [GitHub Issues](https://github.com/omegaalfa/fiber-eventloop/issues)
-- 💬 **Discussões:** [GitHub Discussions](https://github.com/omegaalfa/fiber-eventloop/discussions)
+- 🐛 **Issues:** [GitHub Issues](https://github.com/omegaalfa/FiberEventLoop/issues)
+- 💬 **Discussões:** [GitHub Discussions](https://github.com/omegaalfa/FiberEventLoop/discussions)
 - 📧 **Email:** support@example.com
 
 ---

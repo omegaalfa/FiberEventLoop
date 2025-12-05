@@ -1,5 +1,5 @@
 {
-  "name": "omegaalfa/fiber-eventloop",
+  "name": "omegaalfa/fiber-event-loop",
   "description": "A lightweight, high-performance fiber-based event loop for modern PHP applications. Enables asynchronous I/O with synchronous-like syntax.",
   "type": "library",
   "license": "MIT",
