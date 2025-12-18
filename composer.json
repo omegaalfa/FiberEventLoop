@@ -29,6 +29,11 @@
       "Omegaalfa\\FiberEventLoop\\": "src/"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\Omegaalfa\\FiberEventLoop\\": "tests/"
+    }
+  },
   "minimum-stability": "dev",
   "require-dev": {
     "roave/security-advisories": "dev-latest",
@@ -36,6 +41,11 @@
     "phpunit/phpunit": "^11.5"
   },
   "scripts": {
-    "test": "phpunit"
+    "test": "phpunit",
+    "test-coverage": "phpunit --coverage-html=coverage --coverage-text",
+    "test-verbose": "phpunit --verbose",
+    "test-filter": "phpunit --filter",
+    "test-stop-on-failure": "phpunit --stop-on-failure"
   }
 }
+

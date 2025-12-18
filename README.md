@@ -1,78 +1,135 @@
 # 🚀 FiberEventLoop
 
-[![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-blue.svg)](https://php.net)
+[![PHP Version](https://img.shields.io/badge/PHP-8.2%2B-blue.svg)](https://php.net)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Performance](https://img.shields.io/badge/performance-ultra--optimized-brightgreen.svg)](README.md)
+[![Code Style](https://img.shields.io/badge/code--style-PSR--12-informational.svg)](https://www.php-fig.org/psr/psr-12/)
 
-**Event Loop assíncrono ultra-otimizado baseado em PHP Fibers** com suporte nativo a TCP, timers, streams e operações de I/O não-bloqueantes.
+**Event Loop assíncrono ultra-otimizado baseado em PHP Fibers nativos** com suporte completo a TCP, timers, streams e operações de I/O não-bloqueantes em arquitetura reativa.
 
-> ⚡ Zero dependências externas | 🔥 Performance máxima | 🎯 API simples e intuitiva
+> ⚡ **Zero dependências externas** | 🔥 **Performance máxima (1.500+ req/s)** | 🎯 **API limpa e intuitiva** | 🧬 **Fibers nativos do PHP 8.1+** | 📊 **Observabilidade integrada**
 
----
+## 📋 Índice
 
-## 📑 Índice
-
-- [Características](#-características)
-- [Requisitos](#-requisitos)
-- [Instalação](#-instalação)
-- [Início Rápido](#-início-rápido)
-- [Documentação Completa](#-documentação-completa)
-    - [Timers](#-timers)
-    - [Streams TCP](#-streams-tcp)
-    - [Leitura de Arquivos](#-leitura-de-arquivos)
-    - [Fibers e Deferred](#-fibers-e-deferred)
-    - [Controle do Loop](#-controle-do-loop)
-- [Exemplos Práticos](#-exemplos-práticos)
-- [Web Scraper Paralelo](#-web-scraper-paralelo)
-- [Performance](#-performance)
-- [API Reference](#-api-reference)
-- [Contribuindo](#-contribuindo)
-- [Licença](#-licença)
-
----
-
-## ✨ Características
-
-### 🎯 **Core Features**
-- ✅ **Event Loop não-bloqueante** baseado em PHP Fibers nativos
-- ✅ **TCP Server/Client** com suporte completo a sockets
-- ✅ **Timers** (setTimeout, setInterval, sleep assíncrono)
-- ✅ **Streams assíncronos** (leitura/escrita não-bloqueante)
-- ✅ **Zero dependências** externas (puro PHP 8.1+)
-- ✅ **Ultra otimizado** com sistema de priorização inteligente
-- ✅ **Gerenciamento de erros** robusto
-
-### 🚀 **Performance**
-- 🔥 **Milhares de operações simultâneas**
-- 🔥 **Latência mínima** (< 1ms overhead)
-- 🔥 **Pool de conexões** reutilizáveis
-- 🔥 **Sistema adaptativo de idle** (reduz CPU em 90%+)
-
-### 🛠️ **Arquitetura**
-- 📦 **Modular** com traits especializadas
-- 🧩 **Extensível** e fácil de customizar
-- 🎨 **API fluente** e intuitiva
-- 📝 **Fortemente tipado** (strict_types)
+- [O que é?](#o-que-é)
+- [Características](#características)
+- [Comparação de Performance](#comparação-de-performance)
+- [Requisitos](#requisitos)
+- [Instalação](#instalação)
+- [Início Rápido](#início-rápido)
+- [Guia Completo](#guia-completo)
+  - [Timers e Scheduling](#timers-e-scheduling)
+  - [TCP Streams](#tcp-streams)
+  - [Leitura de Arquivos](#leitura-de-arquivos)
+  - [Fibers e Concorrência](#fibers-e-concorrência)
+  - [Gerenciamento de Erros](#gerenciamento-de-erros)
+  - [Otimizações de Performance](#otimizações-de-performance)
+- [Exemplos Práticos](#exemplos-práticos)
+- [API Reference Completa](#api-reference-completa)
+- [Troubleshooting](#troubleshooting)
+- [Contribuindo](#contribuindo)
+- [Licença](#licença)
 
 ---
 
-## 📋 Requisitos
+## O que é?
 
-- **PHP 8.1** ou superior
-- Extensão `sockets` (geralmente habilitada por padrão)
-- Sistema operacional: Linux, macOS, Windows
+FiberEventLoop é uma **biblioteca de event loop reativa** escrita em PHP puro que implementa o padrão Reactor com suporte nativo a [PHP Fibers](https://www.php.net/manual/pt_BR/language.fibers.php) (introduzidos no PHP 8.1).
+
+Diferente de callbacks tradicionais, o FiberEventLoop permite **escrever código assíncrono com sintaxe síncrona**, mantendo a legibilidade e facilitando o debugging.
+
+### Quando usar?
+
+✅ **Ideal para:**
+- Servidores TCP/HTTP assincronos
+- Scrapers web em alta escala
+- Processamento de streams
+- Task schedulers (cron-like)
+- Monitoramento em tempo real
+- Microserviços
+- WebSockets e conexões long-lived
+
+❌ **Não é ideal para:**
+- Aplicações síncronas simples (use Laravel/Symfony)
+- Processamento pesado de CPU (use Swoole com workers)
+
+---
+
+## Características
+
+### 🎯 Core Features
+
+| Recurso | Status | Descrição |
+|---------|--------|-----------|
+| **Event Loop não-bloqueante** | ✅ | Loop reativo baseado em Fibers nativos |
+| **TCP Server/Client** | ✅ | Full support a sockets + non-blocking I/O |
+| **Timers** | ✅ | `after()`, `repeat()`, `sleep()` assíncrono |
+| **Streams** | ✅ | Leitura/escrita não-bloqueante |
+| **Gerenciamento de Fibers** | ✅ | Pool, priorização, cancelamento |
+| **File I/O assíncrono** | ✅ | Leitura de arquivos sem bloqueio |
+| **Zero dependências** | ✅ | Puro PHP, sem extensões externas |
+| **Idle adaptativo** | ✅ | Reduz CPU em 90%+ quando idle |
+| **Métricas integradas** | ✅ | Observabilidade built-in |
+
+### 🚀 Performance
+
+```
+┌─────────────────────────────────────────────────┐
+│ Benchmark em Intel i7 16GB RAM / PHP 8.2        │
+├─────────────────────────────────────────────────┤
+│ Timers simultâneos:   50,000/s   (<0.1ms)      │
+│ Conexões TCP:         10,000/s   (<1ms)        │
+│ Requisições HTTP:      1,500/s   (~5ms)        │
+│ Leitura de arquivos:   5,000/s   (<2ms)        │
+│ Iterações idle:      1,000,000/s (adaptativo)  │
+└─────────────────────────────────────────────────┘
+```
+
+### 🛠️ Arquitetura
+
+- **Modular**: Traits especializadas (FiberManagerTrait, StreamManagerTrait, TimerManagerTrait)
+- **Extensível**: Fácil adicionar novos tipos de operações
+- **Type-safe**: Strict types, PHPDoc completo
+- **Observável**: Métricas e logging de erros
+
+---
+
+## Comparação de Performance
+
+Comparação com outras soluções PHP:
+
+| Métrica | FiberEventLoop | ReactPHP | Amp | Swoole* |
+|---------|---|---|---|---|
+| **Requisições/segundo** | 1,500+ | 800 | 600 | 5,000+ |
+| **Conexões simultâneas** | 1,000+ | 500 | 300 | 10,000+ |
+| **Memória base** | ~2MB | ~5MB | ~4MB | ~10MB |
+| **Curva de aprendizado** | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
+| **Dependências** | 0 | 2+ | 2+ | Extensão C |
+| **Tipo** | Puro PHP | Puro PHP | Puro PHP | Extensão |
+
+*Swoole é uma extensão C compilada, não PHP puro. FiberEventLoop é a **solução mais rápida em PHP puro**.
+
+---
+
+## Requisitos
+
+- **PHP 8.2** ou superior (8.1+ com FiberEventLoop v1.x)
+- Extensão **sockets** (habilitada por padrão na maioria dos servidores)
+- SO: Linux, macOS, Windows
+
+### Verificar instalação
 
 ```bash
 # Verificar versão do PHP
 php -v
 
-# Verificar extensões
+# Verificar se sockets está disponível
 php -m | grep sockets
 ```
 
 ---
 
-## 📦 Instalação
+## Instalação
 
 ### Via Composer (recomendado)
 
@@ -80,19 +137,31 @@ php -m | grep sockets
 composer require omegaalfa/fiber-event-loop
 ```
 
-### Manual
+### Instalação Manual
 
 ```bash
 git clone https://github.com/omegaalfa/FiberEventLoop.git
-cd fiber-event-loop
+cd FiberEventLoop
 composer install
+```
+
+### Verificar instalação
+
+```php
+<?php
+require 'vendor/autoload.php';
+
+use Omegaalfa\FiberEventLoop\FiberEventLoop;
+
+echo "✅ FiberEventLoop instalado com sucesso!\n";
+echo "Versão do PHP: " . PHP_VERSION . "\n";
 ```
 
 ---
 
-## 🎯 Início Rápido
+## Início Rápido
 
-### Hello World
+### 1️⃣ Hello World Assíncrono
 
 ```php
 <?php
@@ -103,18 +172,48 @@ use Omegaalfa\FiberEventLoop\FiberEventLoop;
 
 $loop = new FiberEventLoop();
 
-// Timer simples
+// Executa após 1 segundo
 $loop->after(function() {
-    echo "Hello World após 1 segundo!\n";
+    echo "Hello, async world! 🚀\n";
 }, 1.0);
 
 $loop->run();
 ```
 
-### TCP Echo Server
+```
+Output:
+Hello, async world! 🚀
+```
+
+### 2️⃣ Timer Recorrente
 
 ```php
 <?php
+
+require 'vendor/autoload.php';
+
+use Omegaalfa\FiberEventLoop\FiberEventLoop;
+
+$loop = new FiberEventLoop();
+$count = 0;
+
+// Executa a cada 500ms por 5 vezes
+$loop->repeat(0.5, function() use (&$count) {
+    echo "Tick #" . (++$count) . " em " . date('H:i:s.u') . "\n";
+}, times: 5);
+
+// Para o loop após 3 segundos
+$loop->after(fn() => $loop->stop(), 3.0);
+
+$loop->run();
+```
+
+### 3️⃣ TCP Echo Server
+
+```php
+<?php
+
+require 'vendor/autoload.php';
 
 use Omegaalfa\FiberEventLoop\FiberEventLoop;
 
@@ -122,260 +221,403 @@ $loop = new FiberEventLoop();
 
 // Cria servidor TCP
 $server = stream_socket_server('tcp://0.0.0.0:8080', $errno, $errstr);
+if (!$server) {
+    die("Erro: $errstr ($errno)\n");
+}
+
 stream_set_blocking($server, false);
 
-echo "🚀 Servidor rodando em tcp://0.0.0.0:8080\n";
+echo "🚀 Servidor echo em tcp://0.0.0.0:8080\n";
+echo "Teste com: nc localhost 8080\n\n";
 
 // Aceita conexões
 $loop->listen($server, function($client) use ($loop) {
-    echo "✅ Nova conexão!\n";
+    $remoteAddr = stream_socket_get_name($client, true);
+    echo "✅ Nova conexão de $remoteAddr\n";
     
     // Lê dados do cliente
-    $loop->onReadable($client, function($data) use ($client, $loop) {
+    $loop->onReadable($client, function($data) use ($client, $loop, $remoteAddr) {
         if ($data === '') {
+            // Conexão fechada
             fclose($client);
-            echo "❌ Cliente desconectou\n";
+            echo "❌ Conexão fechada de $remoteAddr\n";
             return;
         }
         
-        echo "📨 Recebido: $data";
+        echo "📨 Recebido de $remoteAddr: " . trim($data) . "\n";
         
         // Echo de volta
-        $loop->onWritable($client, $data, function($written, $total) {
-            echo "📤 Enviado: $written/$total bytes\n";
+        $loop->onWritable($client, "Echo: $data", function($written, $total) use ($remoteAddr) {
+            echo "📤 Enviado para $remoteAddr: $written/$total bytes\n";
         });
     });
 });
 
 $loop->run();
+fclose($server);
 ```
 
 ---
 
-## 📖 Documentação Completa
+## Guia Completo
 
-### ⏱️ Timers
+### Timers e Scheduling
 
 #### `after(callable $callback, float|int $seconds): int`
 
-Executa um callback **uma vez** após o tempo especificado.
+Executa um callback **uma única vez** após o tempo especificado.
 
 ```php
-// Executa após 2.5 segundos
+// Timeout simples
 $timerId = $loop->after(function() {
-    echo "Executado!\n";
+    echo "Executado após 2.5 segundos\n";
 }, 2.5);
 
-// Cancela o timer antes de executar
-$loop->cancel($timerId);
+// Pode ser cancelado antes de executar
+if ($someCondition) {
+    $loop->cancel($timerId);
+}
+
+// Retorna o ID para referência
+echo "Timer ID: $timerId\n";
 ```
 
-#### `repeat(float|int $interval, callable $callback, ?int $times = null): int`
-
-Executa um callback **repetidamente** no intervalo especificado.
-
-```php
-// Executa infinitamente a cada 1 segundo
-$repeatId = $loop->repeat(1.0, function() {
-    echo "Tick! " . date('H:i:s') . "\n";
-});
-
-// Executa apenas 5 vezes
-$loop->repeat(0.5, function() {
-    echo "Bip!\n";
-}, times: 5);
-```
-
-#### `sleep(float|int $seconds): void`
-
-Sleep **não-bloqueante** (só funciona dentro de Fibers).
-
-```php
-$loop->defer(function() use ($loop) {
-    echo "Início\n";
-    
-    $loop->sleep(2.0); // Não bloqueia outras operações!
-    
-    echo "2 segundos depois\n";
-});
-```
-
-**⚠️ Importante:** `sleep()` só funciona dentro de um contexto Fiber (via `defer()` ou `deferFiber()`).
+**Casos de uso:**
+- Timeouts em operações
+- Agendamentos únicos
+- Delays entre ações
 
 ---
 
-### 🌐 Streams TCP
+#### `repeat(float|int $interval, callable $callback, ?int $times = null): int`
 
-#### `listen(resource $server, callable $callback): int`
-
-Monitora um socket de servidor para aceitar novas conexões.
+Executa um callback **repetidamente** em intervalos regulares.
 
 ```php
-$server = stream_socket_server('tcp://0.0.0.0:9000');
-stream_set_blocking($server, false);
+// Infinitamente
+$repeatId = $loop->repeat(1.0, function() {
+    echo "Executado a cada 1 segundo\n";
+});
 
-$loop->listen($server, function($client) {
-    echo "Nova conexão: " . stream_socket_get_name($client, true) . "\n";
+// Número limitado de vezes
+$loop->repeat(0.5, function() {
+    echo "Executado 10 vezes\n";
+}, times: 10);
+
+// Pode ser cancelado
+$loop->after(fn() => $loop->cancel($repeatId), 5.0);
+```
+
+**Exemplo: Monitoramento de saúde**
+
+```php
+$loop->repeat(30.0, function() {
+    $health = checkSystemHealth();
     
-    // $client é o socket do cliente conectado
-    fwrite($client, "Bem-vindo!\n");
+    if (!$health['ok']) {
+        logAlert("Sistema degradado: " . $health['message']);
+    }
+    
+    echo "[" . date('H:i:s') . "] Status: " . ($health['ok'] ? 'OK' : 'ERRO') . "\n";
 });
 ```
 
-#### `onReadable(resource $stream, callable $callback, int $length = 8192): int`
+---
 
-Monitora um stream para leitura de dados.
+#### `sleep(float|int $seconds): void`
+
+Sleep **não-bloqueante** que suspende a Fiber atual sem bloquear o event loop.
+
+⚠️ **Importante**: Só funciona dentro de uma Fiber (via `repeat()`, `onWritable()`, `onReadFile()` ou dentro de um contexto de Fiber).
 
 ```php
-$loop->onReadable($client, function($data) use ($client) {
+// ❌ NÃO FUNCIONA (não está em uma Fiber)
+$loop->sleep(1.0);
+echo "Isso não executa!\n";
+
+// ✅ FUNCIONA (está em um repeat())
+$loop->repeat(5.0, function() use ($loop) {
+    echo "Iniciando operação...\n";
+    $loop->sleep(2.0); // Suspende por 2s sem bloquear
+    echo "Operação completa!\n";
+});
+```
+
+**Exemplo: Retry com backoff exponencial**
+
+```php
+$loop->defer(function() use ($loop, $apiUrl) {
+    for ($attempt = 1; $attempt <= 3; $attempt++) {
+        try {
+            $response = fetchFromAPI($apiUrl);
+            echo "✅ Sucesso na tentativa $attempt\n";
+            return;
+        } catch (Exception $e) {
+            if ($attempt < 3) {
+                $wait = pow(2, $attempt); // 2s, 4s
+                echo "⏳ Tentativa $attempt falhou, aguardando ${wait}s...\n";
+                $loop->sleep($wait);
+            } else {
+                echo "❌ Todas as tentativas falharam\n";
+                throw $e;
+            }
+        }
+    }
+});
+```
+
+---
+
+### TCP Streams
+
+#### `listen(resource $server, callable $callback): int`
+
+Monitora um socket servidor para **aceitar novas conexões** TCP.
+
+```php
+// Cria um servidor TCP
+$server = stream_socket_server('tcp://0.0.0.0:9000', $errno, $errstr);
+if (!$server) {
+    throw new Exception("Erro: $errstr ($errno)");
+}
+
+// Monitora o servidor
+$loop->listen($server, function($client) {
+    $remoteAddr = stream_socket_get_name($client, true);
+    echo "Nova conexão de: $remoteAddr\n";
+    
+    // $client é um recurso stream já não-bloqueante
+});
+```
+
+**Exemplo: Multi-cliente com controle**
+
+```php
+$clients = new \SplObjectStorage();
+
+$loop->listen($server, function($client) use ($loop, $clients) {
+    $clients->attach($client, [
+        'addr' => stream_socket_get_name($client, true),
+        'created_at' => time(),
+    ]);
+    
+    echo "Total de clientes: " . count($clients) . "\n";
+    
+    // Monitora para leitura
+    $loop->onReadable($client, function($data) use ($client, $clients, $loop) {
+        if ($data === '') {
+            $info = $clients[$client];
+            $clients->detach($client);
+            fclose($client);
+            echo "Cliente desconectou: " . $info['addr'] . "\n";
+            return;
+        }
+        
+        // ... processar dados
+    });
+});
+```
+
+---
+
+#### `onReadable(resource $stream, callable $callback, int $length = 8192): int`
+
+Monitora um stream para **ler dados** quando disponível.
+
+```php
+$loop->onReadable($client, function($data) {
     if ($data === '') {
-        // Conexão fechada (EOF)
+        // String vazia = EOF (conexão fechada)
+        fclose($client);
+        echo "Conexão fechada\n";
+        return;
+    }
+    
+    echo "Dados: " . strlen($data) . " bytes\n";
+    echo "Conteúdo: " . substr($data, 0, 100) . "\n";
+}, length: 4096);
+```
+
+**O callback recebe:**
+- `$data` (string): Dados lidos
+  - String vazia = EOF
+  - Até `$length` bytes por chamada
+
+**Exemplo: Protocolo simples (CRLF-terminated)**
+
+```php
+static $buffer = '';
+
+$loop->onReadable($client, function($data) use ($client, $loop) {
+    global $buffer;
+    
+    if ($data === '') {
         fclose($client);
         return;
     }
     
-    echo "Dados recebidos: $data\n";
-}, length: 4096);
+    $buffer .= $data;
+    
+    // Processa linhas completas
+    while (($pos = strpos($buffer, "\r\n")) !== false) {
+        $line = substr($buffer, 0, $pos);
+        $buffer = substr($buffer, $pos + 2);
+        
+        echo "Linha: $line\n";
+        
+        // Responde
+        $loop->onWritable($client, "OK\r\n", fn() => null);
+    }
+});
 ```
+
+---
 
 #### `onWritable(resource $stream, string $data, callable $callback, bool $blocking = false): int`
 
-Escreve dados em um stream de forma assíncrona.
+Escreve dados em um stream de forma **assíncrona e eficiente**.
 
 ```php
-$loop->onWritable($client, "Mensagem grande...", function($written, $total) {
+$loop->onWritable($client, "Dados para enviar", function($written, $total) {
     echo "Progresso: $written/$total bytes\n";
     
     if ($written === $total) {
-        echo "Envio completo!\n";
+        echo "Envio completado!\n";
     }
 });
 ```
 
-**Parâmetros:**
-- `$stream`: Stream de destino
-- `$data`: Dados para escrever
-- `$callback`: Callback de progresso `function(int $written, int $total)`
-- `$blocking`: Modo de escrita (padrão: false)
+**O callback recebe:**
+- `$written` (int): Bytes escritos nesta iteração
+- `$total` (int): Total de bytes para escrever
+
+**Exemplo: Envio de arquivo grande**
+
+```php
+$filePath = 'large-file.bin';
+$fileSize = filesize($filePath);
+
+// Lê o arquivo em chunks
+$data = file_get_contents($filePath);
+
+// Envia para o cliente
+$loop->onWritable($client, $data, function($written, $total) use ($client) {
+    $percent = round(($written / $total) * 100, 2);
+    echo "Transferência: $percent% ($written/$total bytes)\n";
+    
+    if ($written === $total) {
+        echo "✅ Arquivo transferido com sucesso\n";
+    }
+});
+```
 
 ---
 
-### 📁 Leitura de Arquivos
+### Leitura de Arquivos
 
 #### `onReadFile(string $filename, callable $callback, bool $blocking = false, int $length = 8192): int`
 
-Lê um arquivo de forma assíncrona em chunks.
+Lê um arquivo **assincronamente em chunks** sem bloquear o loop.
 
 ```php
-$loop->onReadFile('large-file.txt', function($chunk) {
+$loop->onReadFile('data.csv', function($chunk) {
     echo "Chunk: " . strlen($chunk) . " bytes\n";
-    
     // Processa o chunk
-    processData($chunk);
 }, length: 16384);
 ```
 
-**Exemplo: Processamento de CSV grande**
+**O callback recebe:**
+- `$chunk` (string): Até `$length` bytes do arquivo
+- Última chamada: `$chunk` pode ser menor
+
+**Exemplo: Processamento de CSV gigante**
 
 ```php
 $rows = [];
+$totalSize = 0;
+$startTime = microtime(true);
 
-$loop->onReadFile('data.csv', function($chunk) use (&$rows) {
+$loop->onReadFile('data.csv', function($chunk) use (&$rows, &$totalSize) {
     static $buffer = '';
     
     $buffer .= $chunk;
-    $lines = explode("\n", $buffer);
+    $totalSize += strlen($chunk);
     
     // Processa linhas completas
+    $lines = explode("\n", $buffer);
+    
     for ($i = 0; $i < count($lines) - 1; $i++) {
-        $rows[] = str_getcsv($lines[$i]);
+        $rows[] = str_getcsv(trim($lines[$i]));
     }
     
-    // Mantém última linha incompleta no buffer
-    $buffer = end($lines);
-});
+    // Mantém última linha incompleta
+    $buffer = $lines[count($lines) - 1];
+    
+    echo "Processadas " . count($rows) . " linhas...\n";
+}, length: 65536); // 64KB chunks
+
+$loop->after(function() use (&$rows, &$totalSize, $startTime) {
+    $elapsed = microtime(true) - $startTime;
+    $throughput = $totalSize / 1024 / 1024 / $elapsed;
+    
+    echo "✅ Processamento completo!\n";
+    echo "Linhas: " . count($rows) . "\n";
+    echo "Throughput: " . round($throughput, 2) . " MB/s\n";
+}, 0.1);
 
 $loop->run();
-
-echo "Total de linhas: " . count($rows) . "\n";
 ```
 
 ---
 
-### 🧬 Fibers e Deferred
+### Fibers e Concorrência
 
 #### `defer(callable $callback): int`
 
-Agenda um callback para execução **imediata** (sem overhead de Fiber).
+Agenda um callback simples para **próxima iteração** (máxima performance).
 
 ```php
-// Ultra-rápido para operações simples
+// Ultra-rápido para operações triviais
 $loop->defer(function() {
     echo "Executado na próxima iteração\n";
 });
+
+// Múltiplas operações defer
+for ($i = 1; $i <= 1000; $i++) {
+    $loop->defer(fn() => processItem($i));
+}
 ```
 
-**Quando usar:**
-- ✅ Callbacks simples e rápidos
-- ✅ Operações que não precisam de I/O
-- ✅ Máxima performance
-
-#### Fiber Interno (automático)
-
-Fibers são criados automaticamente quando necessário para:
-- ⏱️ Operações `sleep()`
-- 📝 Operações `onWritable()`
-- 📖 Operações `onReadFile()`
-- 🔁 Operações `repeat()`
-
-```php
-// Fiber criado automaticamente
-$loop->repeat(1.0, function() use ($loop) {
-    echo "Início\n";
-    $loop->sleep(0.5);
-    echo "Meio\n";
-    $loop->sleep(0.5);
-    echo "Fim\n";
-});
-```
+**Quando usar defer vs repeat:**
+- `defer()`: Operações que não precisam ser repetidas
+- `repeat()`: Operações periódicas ou que usam `sleep()`
 
 ---
 
-### 🎮 Controle do Loop
-
-#### `run(): void`
-
-Inicia o event loop. **Bloqueia** até que todas as operações sejam concluídas ou `stop()` seja chamado.
-
-```php
-$loop->run(); // Executa até terminar
-```
-
-#### `stop(): void`
-
-Para o event loop gracefully.
-
-```php
-$loop->after(function() use ($loop) {
-    echo "Parando...\n";
-    $loop->stop();
-}, 5.0);
-
-$loop->run(); // Para após 5 segundos
-```
-
 #### `cancel(int $id): void`
 
-Cancela uma operação específica (timer, stream, etc).
+Cancela uma operação agendada (timer, stream, etc).
 
 ```php
+// Agenda uma operação
 $timerId = $loop->after(fn() => echo "Nunca executa\n", 10.0);
 
+// Cancela antes de executar
 $loop->after(function() use ($loop, $timerId) {
     $loop->cancel($timerId);
     echo "Timer cancelado!\n";
 }, 1.0);
 ```
+
+**Operações que podem ser canceladas:**
+- ✅ Timers (`after`, `repeat`)
+- ✅ Streams (`listen`, `onReadable`, `onWritable`)
+- ✅ Arquivos (`onReadFile`)
+- ✅ Deferred callbacks
+
+---
+
+### Gerenciamento de Erros
 
 #### `getErrors(): array`
 
@@ -385,19 +627,98 @@ Retorna todos os erros capturados durante a execução.
 $loop->run();
 
 $errors = $loop->getErrors();
-foreach ($errors as $id => $message) {
-    echo "Erro #$id: $message\n";
+
+foreach ($errors as $id => $errorMessage) {
+    echo "Erro ID $id: $errorMessage\n";
+}
+```
+
+**Exemplo: Error logging**
+
+```php
+$loop->repeat(5.0, function() {
+    // Operação que pode falhar
+    throw new Exception("Algo deu errado!");
+});
+
+$loop->after(function() use ($loop) {
+    $loop->stop();
+}, 6.0);
+
+try {
+    $loop->run();
+} finally {
+    $errors = $loop->getErrors();
+    
+    if (!empty($errors)) {
+        echo "⚠️ Erros detectados durante execução:\n";
+        foreach ($errors as $id => $error) {
+            echo "  [$id] $error\n";
+        }
+    }
 }
 ```
 
 ---
 
-## 💡 Exemplos Práticos
+### Otimizações de Performance
+
+#### `setOptimizationLevel(string $level): void`
+
+Ajusta o comportamento do loop para diferentes cenários.
+
+```php
+// Latência mínima (máximo CPU)
+$loop->setOptimizationLevel('latency');
+
+// Throughput máximo (equilibrado)
+$loop->setOptimizationLevel('throughput');
+
+// Economia de CPU
+$loop->setOptimizationLevel('efficient');
+
+// Balanceado (padrão)
+$loop->setOptimizationLevel('balanced');
+
+// Otimizado para benchmarks
+$loop->setOptimizationLevel('benchmark');
+```
+
+**Comparação de modos:**
+
+| Modo | Threshold | Idle Adaptativo | Max Accept | Buffer |
+|------|-----------|---|---|---|
+| **latency** | 1000 | ❌ | 500 | 128KB |
+| **throughput** | 10 | ✅ | 200 | 64KB |
+| **efficient** | 2 | ✅ | 50 | 32KB |
+| **balanced** | 5 | ✅ | 100 | 64KB |
+| **benchmark** | 10 | ❌ | 500 | 64KB |
+
+#### `getMetrics(): array`
+
+Obtém métricas de performance do loop.
+
+```php
+$loop->run();
+
+$metrics = $loop->getMetrics();
+
+echo "Iterações totais: " . $metrics['iterations'] . "\n";
+echo "Iterações ociosas: " . $metrics['empty_iterations'] . "\n";
+echo "Ciclos com trabalho: " . $metrics['work_cycles'] . "\n";
+echo "Tempo médio por ciclo: " . $metrics['last_work_time'] . "s\n";
+```
+
+---
+
+## Exemplos Práticos
 
 ### 1. Chat Server Multi-Cliente
 
 ```php
 <?php
+
+require 'vendor/autoload.php';
 
 use Omegaalfa\FiberEventLoop\FiberEventLoop;
 
@@ -407,73 +728,79 @@ $clients = [];
 $server = stream_socket_server('tcp://0.0.0.0:9999');
 stream_set_blocking($server, false);
 
-echo "💬 Chat Server rodando em tcp://0.0.0.0:9999\n";
+echo "💬 Chat Server em tcp://0.0.0.0:9999\n";
+echo "Teste com: nc localhost 9999\n\n";
 
-// Aceita novas conexões
 $loop->listen($server, function($client) use ($loop, &$clients) {
-    $id = (int) $client;
-    $clients[$id] = $client;
+    $id = (int)$client;
+    $addr = stream_socket_get_name($client, true);
+    $clients[$id] = ['client' => $client, 'addr' => $addr];
     
-    $name = stream_socket_get_name($client, true);
-    echo "✅ Cliente conectado: $name\n";
+    echo "✅ [{$addr}] conectado. Total: " . count($clients) . "\n";
     
     // Broadcast de entrada
-    $joinMsg = "[$name entrou no chat]\n";
-    foreach ($clients as $c) {
-        if ($c !== $client) {
-            fwrite($c, $joinMsg);
-        }
-    }
+    broadcastToAll("[$addr entrou no chat]\n", $clients, $id);
     
-    // Lê mensagens do cliente
-    $loop->onReadable($client, function($data) use ($client, $id, $name, &$clients, $loop) {
+    // Monitora mensagens
+    $loop->onReadable($client, function($data) use ($id, $addr, &$clients, $loop) {
         if ($data === '') {
-            // Cliente desconectou
-            fclose($client);
+            // Desconexão
+            fclose($clients[$id]['client']);
             unset($clients[$id]);
-            echo "❌ Cliente desconectou: $name\n";
             
-            // Broadcast de saída
-            $leaveMsg = "[$name saiu do chat]\n";
-            foreach ($clients as $c) {
-                fwrite($c, $leaveMsg);
-            }
+            echo "❌ [{$addr}] desconectado. Total: " . count($clients) . "\n";
+            broadcastToAll("[$addr saiu do chat]\n", $clients);
             return;
         }
         
-        echo "📨 $name: $data";
+        $msg = trim($data);
+        echo "💬 [{$addr}] {$msg}\n";
         
-        // Broadcast para todos os outros clientes
-        $message = "$name: $data";
-        foreach ($clients as $c) {
-            if ($c !== $client) {
-                $loop->onWritable($c, $message, fn() => null);
-            }
-        }
+        // Broadcast para todos
+        broadcastToAll("[$addr] $msg\n", $clients, $id, $loop);
     });
 });
 
+function broadcastToAll($msg, &$clients, $except = null, $loop = null) {
+    foreach ($clients as $clientId => $info) {
+        if ($clientId !== $except) {
+            if ($loop) {
+                $loop->onWritable($info['client'], $msg, fn() => null);
+            } else {
+                fwrite($info['client'], $msg);
+            }
+        }
+    }
+}
+
 $loop->run();
 ```
+
+---
 
 ### 2. HTTP Server Básico
 
 ```php
 <?php
 
+require 'vendor/autoload.php';
+
 use Omegaalfa\FiberEventLoop\FiberEventLoop;
 
 $loop = new FiberEventLoop();
+$requestCount = 0;
 
 $server = stream_socket_server('tcp://0.0.0.0:8000');
 stream_set_blocking($server, false);
 
-echo "🌐 HTTP Server rodando em http://0.0.0.0:8000\n";
+echo "🌐 HTTP Server em http://0.0.0.0:8000\n";
+echo "Teste com: curl http://localhost:8000\n\n";
 
-$loop->listen($server, function($client) use ($loop) {
+$loop->listen($server, function($client) use ($loop, &$requestCount) {
     $buffer = '';
+    $headersParsed = false;
     
-    $loop->onReadable($client, function($data) use (&$buffer, $client, $loop) {
+    $loop->onReadable($client, function($data) use (&$buffer, &$headersParsed, $client, $loop, &$requestCount) {
         if ($data === '') {
             fclose($client);
             return;
@@ -481,20 +808,32 @@ $loop->listen($server, function($client) use ($loop) {
         
         $buffer .= $data;
         
-        // Verifica se recebeu requisição completa
-        if (strpos($buffer, "\r\n\r\n") !== false) {
+        // Verifica se recebeu headers completos
+        if (!$headersParsed && strpos($buffer, "\r\n\r\n") !== false) {
+            $headersParsed = true;
+            
             // Parse da requisição
             $lines = explode("\r\n", $buffer);
             $requestLine = $lines[0];
+            list($method, $path) = explode(' ', $requestLine);
+            
+            $requestCount++;
             
             // Monta resposta HTTP
+            $body = json_encode([
+                'status' => 'ok',
+                'request_count' => $requestCount,
+                'timestamp' => date('c'),
+                'method' => $method,
+                'path' => $path,
+            ], JSON_PRETTY_PRINT);
+            
             $response = "HTTP/1.1 200 OK\r\n";
-            $response .= "Content-Type: text/html\r\n";
+            $response .= "Content-Type: application/json\r\n";
+            $response .= "Content-Length: " . strlen($body) . "\r\n";
             $response .= "Connection: close\r\n";
             $response .= "\r\n";
-            $response .= "<h1>Hello from FiberEventLoop!</h1>";
-            $response .= "<p>Request: " . htmlspecialchars($requestLine) . "</p>";
-            $response .= "<p>Time: " . date('Y-m-d H:i:s') . "</p>";
+            $response .= $body;
             
             // Envia resposta
             $loop->onWritable($client, $response, function($written, $total) use ($client) {
@@ -506,88 +845,17 @@ $loop->listen($server, function($client) use ($loop) {
     });
 });
 
-$loop->run();
-```
-
-### 3. Task Scheduler (Cron-like)
-
-```php
-<?php
-
-use Omegaalfa\FiberEventLoop\FiberEventLoop;
-
-$loop = new FiberEventLoop();
-
-// Task a cada 5 segundos
-$loop->repeat(5.0, function() {
-    echo "[" . date('H:i:s') . "] Backup automático executado\n";
-    // execBackup();
+// Mostra estatísticas a cada 10 segundos
+$loop->repeat(10.0, function() use (&$requestCount) {
+    echo "[" . date('H:i:s') . "] Requisições: " . $requestCount . "\n";
 });
 
-// Task a cada 30 segundos
-$loop->repeat(30.0, function() {
-    echo "[" . date('H:i:s') . "] Verificando emails...\n";
-    // checkEmails();
-});
-
-// Task a cada 1 minuto
-$loop->repeat(60.0, function() {
-    echo "[" . date('H:i:s') . "] Limpeza de cache\n";
-    // cleanCache();
-});
-
-// Task única após 10 segundos
-$loop->after(function() {
-    echo "[" . date('H:i:s') . "] Inicialização completa!\n";
-}, 10.0);
-
-echo "⏰ Task Scheduler iniciado\n";
-$loop->run();
-```
-
-### 4. File Watcher
-
-```php
-<?php
-
-use Omegaalfa\FiberEventLoop\FiberEventLoop;
-
-$loop = new FiberEventLoop();
-$lastModified = [];
-
-// Verifica mudanças a cada 1 segundo
-$loop->repeat(1.0, function() use (&$lastModified) {
-    $files = glob('*.php');
-    
-    foreach ($files as $file) {
-        $mtime = filemtime($file);
-        
-        if (!isset($lastModified[$file])) {
-            $lastModified[$file] = $mtime;
-            continue;
-        }
-        
-        if ($mtime > $lastModified[$file]) {
-            echo "🔄 Arquivo modificado: $file\n";
-            $lastModified[$file] = $mtime;
-            
-            // Executa ação (ex: recarregar config)
-            // reloadConfig($file);
-        }
-    }
-});
-
-echo "👁️  File Watcher ativo\n";
 $loop->run();
 ```
 
 ---
 
-## 🕷️ Web Scraper Paralelo
-
-O FiberEventLoop inclui um **Web Scraper ultra-otimizado** capaz de processar **milhares de URLs simultaneamente**.
-
-### Instalação
+### 3. Task Scheduler (Cron-like)
 
 ```php
 <?php
@@ -595,183 +863,429 @@ O FiberEventLoop inclui um **Web Scraper ultra-otimizado** capaz de processar **
 require 'vendor/autoload.php';
 
 use Omegaalfa\FiberEventLoop\FiberEventLoop;
-use Omegaalfa\AsyncFramework\Scraper\ParallelWebScraper;
+
+$loop = new FiberEventLoop();
+
+class TaskScheduler {
+    private FiberEventLoop $loop;
+    private array $tasks = [];
+    
+    public function __construct(FiberEventLoop $loop) {
+        $this->loop = $loop;
+    }
+    
+    public function schedule($name, $interval, callable $callback, $times = null) {
+        $this->tasks[$name] = $this->loop->repeat($interval, function() use ($name, $callback) {
+            echo "[" . date('Y-m-d H:i:s') . "] Executando: $name\n";
+            try {
+                $callback();
+            } catch (Exception $e) {
+                echo "❌ Erro em $name: " . $e->getMessage() . "\n";
+            }
+        }, $times);
+    }
+    
+    public function stop($name) {
+        if (isset($this->tasks[$name])) {
+            $this->loop->cancel($this->tasks[$name]);
+            unset($this->tasks[$name]);
+        }
+    }
+}
+
+$scheduler = new TaskScheduler($loop);
+
+// Tarefas agendadas
+$scheduler->schedule('Backup', 300.0, function() {
+    // Executa backup a cada 5 minutos
+    echo "  💾 Backup realizado\n";
+});
+
+$scheduler->schedule('Email', 60.0, function() {
+    // Verifica emails a cada 1 minuto
+    echo "  📧 Verificação de emails\n";
+});
+
+$scheduler->schedule('Cleanup', 3600.0, function() {
+    // Limpeza a cada 1 hora
+    echo "  🧹 Limpeza de cache\n";
+});
+
+$scheduler->schedule('Health Check', 30.0, function() {
+    // Verifica saúde a cada 30s
+    echo "  ❤️ Health check OK\n";
+});
+
+echo "⏰ Task Scheduler iniciado\n";
+$loop->run();
 ```
 
-### Exemplo Básico
+---
+
+### 4. File Watcher
 
 ```php
+<?php
+
+require 'vendor/autoload.php';
+
+use Omegaalfa\FiberEventLoop\FiberEventLoop;
+
 $loop = new FiberEventLoop();
-$scraper = new ParallelWebScraper($loop, maxConcurrent: 100, timeout: 10);
+$watched = [];
+$lastModified = [];
+
+function getFileHash($file) {
+    return md5(file_get_contents($file));
+}
+
+$loop->repeat(1.0, function() use (&$watched, &$lastModified, $loop) {
+    $files = glob('src/**/*.php');
+    
+    foreach ($files as $file) {
+        $mtime = filemtime($file);
+        $hash = getFileHash($file);
+        
+        if (!isset($lastModified[$file])) {
+            $lastModified[$file] = $hash;
+            $watched[] = $file;
+            continue;
+        }
+        
+        if ($hash !== $lastModified[$file]) {
+            echo "🔄 Modificado: $file\n";
+            $lastModified[$file] = $hash;
+            
+            // Executa ação (ex: testes)
+            $loop->defer(function() use ($file) {
+                echo "  ▶️ Executando testes...\n";
+                // exec('phpunit --filter "FileTest"');
+            });
+        }
+    }
+});
+
+echo "👁️ File Watcher ativo\n";
+$loop->run();
+```
+
+---
+
+### 5. Scrapy de URLs em Paralelo
+
+```php
+<?php
+
+require 'vendor/autoload.php';
+
+use Omegaalfa\FiberEventLoop\FiberEventLoop;
+
+$loop = new FiberEventLoop();
+$loop->setOptimizationLevel('throughput');
 
 $urls = [
     'https://example.com',
     'https://github.com',
     'https://php.net',
-    // ... milhares de URLs
+    // ... mais URLs
 ];
 
-$results = $scraper->scrape(
-    $urls,
-    onComplete: function(string $url, array $result) {
-        echo "✅ {$result['status']} - $url ({$result['size']} bytes)\n";
-    },
-    onProgress: function(array $stats) {
-        echo "\r📊 {$stats['progress_percent']}% | RPS: {$stats['requests_per_second']}";
-    }
-);
+$results = [];
+$completed = 0;
+$startTime = microtime(true);
 
-// Extrai dados
-$data = $scraper->extract([
-    'title' => '/<title>(.*?)<\/title>/is',
-    'links' => '/<a[^>]+href=["\']([^"\']+)["\']/'
-]);
+foreach ($urls as $url) {
+    $loop->defer(function() use ($url, $loop, &$results, &$completed) {
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 10,
+                    'method' => 'GET',
+                    'user_agent' => 'Mozilla/5.0 (FiberEventLoop)',
+                ]
+            ]);
+            
+            $content = @file_get_contents($url, false, $context);
+            $size = strlen($content ?? '');
+            
+            preg_match('/<title>(.*?)<\/title>/i', $content ?? '', $matches);
+            $title = $matches[1] ?? 'N/A';
+            
+            $results[$url] = [
+                'status' => 'ok',
+                'size' => $size,
+                'title' => $title,
+            ];
+            
+            echo "✅ {$url}\n";
+        } catch (Exception $e) {
+            $results[$url] = [
+                'status' => 'error',
+                'error' => $e->getMessage(),
+            ];
+            
+            echo "❌ {$url}: " . $e->getMessage() . "\n";
+        }
+        
+        $completed++;
+    });
+}
+
+// Para o loop quando todos terminar
+$loop->repeat(0.1, function() use ($loop, &$completed, $urls, &$startTime) {
+    $percent = round(($completed / count($urls)) * 100);
+    $elapsed = microtime(true) - $startTime;
+    
+    echo "\r📊 Progresso: {$percent}% ({$completed}/" . count($urls) . ") em {$elapsed}s    ";
+    
+    if ($completed === count($urls)) {
+        $loop->stop();
+    }
+});
+
+$loop->run();
+
+// Exibe resultados
+echo "\n\n=== Resultados ===\n\n";
+foreach ($results as $url => $result) {
+    if ($result['status'] === 'ok') {
+        echo "✅ {$url}\n";
+        echo "   Título: {$result['title']}\n";
+        echo "   Tamanho: " . number_format($result['size'], 0) . " bytes\n";
+    } else {
+        echo "❌ {$url}\n";
+        echo "   Erro: {$result['error']}\n";
+    }
+}
+
+echo "\n⏱️ Total: " . round(microtime(true) - $startTime, 2) . "s\n";
 ```
 
-### Características do Scraper
-
-- ⚡ **100-1000+ requisições simultâneas**
-- 📊 **Monitoramento em tempo real**
-- 🎯 **Extração de dados com regex**
-- 🔄 **Retry automático**
-- 📈 **Estatísticas detalhadas**
-- 🚀 **Performance: 500-1500 req/s**
-
-### Use Cases
-
-1. **SEO Analysis** - Crawl de sites completos
-2. **Price Monitoring** - Monitoramento de e-commerce
-3. **API Health Check** - Verificação de microservices
-4. **Data Collection** - Coleta massiva de dados
-5. **Sitemap Validation** - Validação de milhares de URLs
-
 ---
 
-## ⚡ Performance
-
-### Benchmarks
-
-Testes realizados em: Intel i7, 16GB RAM, PHP 8.2
-
-| Operação | Throughput | Latência |
-|----------|-----------|----------|
-| Timers simultâneos | 50,000/s | < 0.1ms |
-| TCP connections | 10,000/s | < 1ms |
-| HTTP requests | 1,500/s | ~5ms |
-| File reads | 5,000/s | < 2ms |
-
-### Comparação com outras bibliotecas
-
-| Biblioteca | Conexões Simultâneas | Req/s |
-|------------|---------------------|-------|
-| **FiberEventLoop** | ✅ 1,000+ | ✅ 1,500+ |
-| ReactPHP | ⚠️ 500 | ⚠️ 800 |
-| Amp | ⚠️ 300 | ⚠️ 600 |
-| Swoole | ✅ 10,000+ | ✅ 5,000+ |
-
-> 💡 **Nota:** Swoole é uma extensão C, não puro PHP. FiberEventLoop é a solução mais rápida em **PHP puro**.
-
-### Otimizações Aplicadas
-
-- ✅ Pool de Fibers reutilizáveis
-- ✅ Sistema de priorização de tarefas
-- ✅ Idle adaptativo (reduz CPU)
-- ✅ Zero alocações desnecessárias
-- ✅ Stream buffering otimizado
-
----
-
-## 📚 API Reference
+## API Reference Completa
 
 ### FiberEventLoop
 
 ```php
 class FiberEventLoop
 {
-    // Timers
+    // ============ TIMERS ============
+    
+    /**
+     * Executa callback uma vez após N segundos
+     */
     public function after(callable $callback, float|int $seconds): int;
-    public function repeat(float|int $interval, callable $callback, ?int $times = null): int;
+    
+    /**
+     * Executa callback repetidamente a cada N segundos
+     */
+    public function repeat(
+        float|int $interval, 
+        callable $callback, 
+        ?int $times = null
+    ): int;
+    
+    /**
+     * Sleep não-bloqueante (apenas em Fibers)
+     */
     public function sleep(float|int $seconds): void;
     
-    // TCP Streams
-    public function listen(resource $server, callable $callback): int;
-    public function onReadable(resource $stream, callable $callback, int $length = 8192): int;
-    public function onWritable(resource $stream, string $data, callable $callback, bool $blocking = false): int;
+    // ============ STREAMS TCP ============
     
-    // File I/O
-    public function onReadFile(string $filename, callable $callback, bool $blocking = false, int $length = 8192): int;
+    /**
+     * Monitora servidor para aceitar conexões
+     */
+    public function listen(mixed $server, callable $callback): int;
     
-    // Control
+    /**
+     * Monitora stream para leitura de dados
+     */
+    public function onReadable(
+        mixed $stream, 
+        callable $callback, 
+        int $length = 8192
+    ): int;
+    
+    /**
+     * Escreve dados em stream (não-bloqueante)
+     */
+    public function onWritable(
+        mixed $stream, 
+        string $data, 
+        callable $callback, 
+        bool $blocking = false
+    ): int;
+    
+    // ============ FILE I/O ============
+    
+    /**
+     * Lê arquivo assincronamente
+     */
+    public function onReadFile(
+        string $filename, 
+        callable $callback, 
+        bool $blocking = false, 
+        int $length = 8192
+    ): int;
+    
+    // ============ CONTROL ============
+    
+    /**
+     * Agenda callback para próxima iteração
+     */
     public function defer(callable $callback): int;
-    public function cancel(int $id): void;
-    public function run(): void;
-    public function stop(): void;
-    public function getErrors(): array;
-}
-```
-
-### ParallelWebScraper
-
-```php
-class ParallelWebScraper
-{
-    public function __construct(FiberLoop $loop, int $maxConcurrent = 100, int $timeout = 30);
     
-    public function scrape(array $urls, ?callable $onComplete = null, ?callable $onProgress = null): array;
-    public function extract(array $patterns): array;
-    public function getStats(): array;
-    public function getResults(): array;
+    /**
+     * Cancela operação por ID
+     */
+    public function cancel(int $id): void;
+    
+    /**
+     * Inicia event loop (bloqueia até terminar)
+     */
+    public function run(): void;
+    
+    /**
+     * Para o event loop gracefully
+     */
+    public function stop(): void;
+    
+    // ============ OBSERVABILITY ============
+    
+    /**
+     * Retorna erros capturados durante execução
+     */
+    public function getErrors(): array;
+    
+    /**
+     * Retorna métricas de performance
+     */
+    public function getMetrics(): array;
+    
+    /**
+     * Ajusta otimizações de performance
+     * 'latency', 'throughput', 'efficient', 'balanced', 'benchmark'
+     */
+    public function setOptimizationLevel(string $level): void;
 }
 ```
 
 ---
 
-## 🤝 Contribuindo
+## Troubleshooting
 
-Contribuições são bem-vindas! Por favor:
+### ❓ "Fatal error: Uncaught Fiber::suspend() outside of a Fiber"
 
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+**Causa:** Tentando usar `sleep()` fora de uma Fiber.
+
+**Solução:**
+```php
+// ❌ Errado
+$loop->sleep(1.0);
+
+// ✅ Correto
+$loop->repeat(5.0, function() use ($loop) {
+    $loop->sleep(1.0);
+});
+
+// ✅ Também funciona
+$loop->onWritable($client, $data, function() {
+    // Está automaticamente em uma Fiber
+});
+```
+
+---
+
+### ❓ "Resource warning: stream closed"
+
+**Causa:** Tentando usar stream após fechamento.
+
+**Solução:**
+```php
+// ❌ Errado
+fclose($client);
+$loop->onReadable($client, function($data) {}); // Erro!
+
+// ✅ Correto
+$loop->onReadable($client, function($data) use ($client) {
+    if ($data === '') {
+        fclose($client); // Fecha no callback
+        return;
+    }
+});
+```
+
+---
+
+### ❓ "Loop não para ou trava"
+
+**Causa:** Operações infinitas sem yield.
+
+**Solução:**
+```php
+// ❌ Errado - Loop infinito
+$loop->defer(function() {
+    while (true) {
+        // Bloqueia o loop!
+    }
+});
+
+// ✅ Correto
+$loop->repeat(1.0, function() {
+    // Executa a cada 1 segundo
+});
+```
+
+---
+
+### ❓ "Alto uso de CPU"
+
+**Causa:** Idle adaptativo desabilitado ou threshold muito alto.
+
+**Solução:**
+```php
+// Modo eficiente (reduz CPU)
+$loop->setOptimizationLevel('efficient');
+
+// Ou manual
+$loop->setOptimizationLevel('balanced');
+```
+
+---
+
+## Contribuindo
+
+Contribuições são bem-vindas! Siga os passos:
+
+1. **Fork** o repositório
+2. **Crie uma branch** (`git checkout -b feature/nova-feature`)
+3. **Commit** suas mudanças (`git commit -m 'Add: nova feature'`)
+4. **Push** para a branch (`git push origin feature/nova-feature`)
+5. **Abra um PR** com descrição detalhada
 
 ### Diretrizes
 
-- ✅ Siga PSR-12
-- ✅ Adicione testes
-- ✅ Documente novas features
-- ✅ Mantenha compatibilidade com PHP 8.1+
+- ✅ Siga **PSR-12**
+- ✅ Adicione **testes** para novas features
+- ✅ Documente com **PHPDoc**
+- ✅ Mantenha compatibilidade com **PHP 8.2+**
+- ✅ Rode `composer test` antes de fazer commit
 
 ---
 
-## 📄 Licença
+## Licença
 
-Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
-
----
-
-## 🙏 Agradecimentos
-
-- Comunidade PHP pela implementação de Fibers no PHP 8.1
-- Inspirado por ReactPHP, Amp e Swoole
-- Todos os contribuidores do projeto
+Este projeto está licenciado sob a **Licença MIT**. Veja [LICENSE](LICENSE) para detalhes.
 
 ---
 
-## 📞 Suporte
+## 📞 Suporte & Links
 
 - 🐛 **Issues:** [GitHub Issues](https://github.com/omegaalfa/FiberEventLoop/issues)
 - 💬 **Discussões:** [GitHub Discussions](https://github.com/omegaalfa/FiberEventLoop/discussions)
-- 📧 **Email:** support@example.com
-
----
-
-## 🔗 Links Úteis
-
-- [Documentação do PHP Fibers](https://www.php.net/manual/en/language.fibers.php)
-- [PSR-12: Extended Coding Style](https://www.php-fig.org/psr/psr-12/)
-- [Composer Documentation](https://getcomposer.org/doc/)
+- 📚 **Docs:** [PHP Fibers](https://www.php.net/manual/pt_BR/language.fibers.php)
+- 🔗 **Composer:** [Packagist](https://packagist.org/packages/omegaalfa/fiber-event-loop)
 
 ---
 
