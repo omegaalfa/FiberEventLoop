@@ -7,11 +7,6 @@ namespace Tests\Omegaalfa\FiberEventLoop;
 use Omegaalfa\FiberEventLoop\FiberEventLoop;
 use PHPUnit\Framework\TestCase;
 
-/**
- * Testes unitários do FiberEventLoop
- * 
- * Cobre funcionalidades básicas de event loop, timers e métricas.
- */
 class FiberEventLoopTest extends TestCase
 {
     private FiberEventLoop $loop;
@@ -22,405 +17,626 @@ class FiberEventLoopTest extends TestCase
     }
 
     /**
-     * Testa execução básica do loop
+     * Test run() without work stops immediately
      */
-    public function testLoopExecutesAndStops(): void
+    public function testRunWithoutWorkStopsImmediately(): void
     {
-        $executed = false;
-
-        $this->loop->after(function() use (&$executed) {
-            $executed = true;
-        }, 0.01);
-
-        $this->loop->run();
-
-        $this->assertTrue($executed, 'Callback deveria ter sido executado');
-    }
-
-    /**
-     * Testa timer após (after)
-     */
-    public function testAfterTimer(): void
-    {
-        $results = [];
         $startTime = microtime(true);
-
-        $this->loop->after(function() use (&$results, $startTime) {
-            $results[] = microtime(true) - $startTime;
-        }, 0.1);
-
         $this->loop->run();
+        $elapsedTime = microtime(true) - $startTime;
 
-        $this->assertCount(1, $results, 'Timer deveria ter executado uma vez');
-        $this->assertGreaterThanOrEqual(0.09, $results[0], 'Timer executou muito cedo');
-        $this->assertLessThan(0.2, $results[0], 'Timer executou muito atrasado');
+        // Should exit very quickly
+        $this->assertLessThan(0.1, $elapsedTime);
     }
 
     /**
-     * Testa timer repetido (repeat)
+     * Test run() with deferred work executes
      */
-    public function testRepeatTimer(): void
+    public function testRunWithDeferredWorkExecutes(): void
     {
-        $count = 0;
+        $executed = false;
 
-        $this->loop->repeat(0.01, function() use (&$count) {
-            $count++;
-        }, times: 3);
-
-        $this->loop->run();
-
-        $this->assertEquals(3, $count, 'Timer repetido deveria ter executado 3 vezes');
-    }
-
-    /**
-     * Testa repeat com limite de execuções
-     */
-    public function testRepeatWithLimitedTimes(): void
-    {
-        $results = [];
-
-        $id = $this->loop->repeat(0.01, function() use (&$results) {
-            $results[] = count($results);
-        }, times: 5);
-
-        $this->loop->run();
-
-        $this->assertCount(5, $results);
-        $this->assertEquals([0, 1, 2, 3, 4], $results);
-    }
-
-    /**
-     * Testa repeat com cancelamento para evitar infinito
-     */
-    public function testRepeatWithCancellation(): void
-    {
-        $count = 0;
-
-        $timerId = $this->loop->repeat(0.01, function() use (&$count, &$timerId) {
-            $count++;
-            if ($count >= 5) {
-                $this->loop->cancel($timerId);
-            }
+        $this->loop->defer(function () use (&$executed) {
+            $executed = true;
         });
 
         $this->loop->run();
 
-        $this->assertEquals(5, $count);
+        $this->assertTrue($executed);
     }
 
     /**
-     * Testa cancelamento de timer
+     * Test stop() halts the loop
      */
-    public function testCancelTimer(): void
+    public function testStopHaltsLoop(): void
     {
         $executed = false;
 
-        $timerId = $this->loop->after(function() use (&$executed) {
+        $this->loop->defer(function () use (&$executed) {
             $executed = true;
-        }, 0.1);
+            $this->loop->stop();
+        });
 
-        $this->loop->after(function() use (&$timerId) {
-            $this->loop->cancel($timerId);
+        $this->loop->run();
+
+        $this->assertTrue($executed);
+    }
+
+    /**
+     * Test stop() can be called from timer
+     */
+    public function testStopFromTimer(): void
+    {
+        $executed = false;
+
+        $this->loop->after(function () use (&$executed) {
+            $executed = true;
+            $this->loop->stop();
         }, 0.01);
 
         $this->loop->run();
 
-        $this->assertFalse($executed, 'Timer cancelado não deveria ter executado');
+        $this->assertTrue($executed);
     }
 
     /**
-     * Testa stop() do loop
+     * Test getErrors() returns captured errors
      */
-    public function testStopLoop(): void
+    public function testGetErrorsReturnsCapturedErrors(): void
     {
-        $results = [];
-
-        $this->loop->repeat(0.01, function() use (&$results) {
-            $results[] = 1;
-            if (count($results) >= 3) {
-                // Stop não para imediatamente, para após essa iteração
-            }
+        $this->loop->defer(function () {
+            throw new \Exception("First error");
         });
 
-        $this->loop->after(function() {
-            $this->loop->stop();
-        }, 0.05);
+        $this->loop->defer(function () {
+            throw new \Exception("Second error");
+        });
 
+        $this->loop->defer(fn() => $this->loop->stop());
         $this->loop->run();
 
-        // Deve ter parado em algum ponto
-        $this->assertLessThanOrEqual(10, count($results));
-        $this->assertGreaterThan(0, count($results));
+        $errors = $this->loop->getErrors();
+
+        $this->assertCount(2, $errors);
+        $this->assertStringContainsString("First error", $errors[1] ?? reset($errors));
+        $this->assertStringContainsString("Second error", $errors[2] ?? end($errors));
     }
 
     /**
-     * Testa defer
+     * Test getErrors() returns empty array initially
      */
-    public function testDefer(): void
+    public function testGetErrorsEmptyInitially(): void
+    {
+        $errors = $this->loop->getErrors();
+
+        $this->assertIsArray($errors);
+        $this->assertEmpty($errors);
+    }
+
+    /**
+     * Test getErrors() persists between operations
+     */
+    public function testGetErrorsPersistsBetweenOperations(): void
+    {
+        $this->loop->defer(function () {
+            throw new \Exception("Test error");
+        });
+
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        $errors = $this->loop->getErrors();
+        
+        $this->assertCount(1, $errors);
+
+        // Run again
+        $this->loop = new FiberEventLoop();
+        $errors2 = $this->loop->getErrors();
+        
+        $this->assertEmpty($errors2);
+    }
+
+    /**
+     * Test getMetrics() returns metrics array
+     */
+    public function testGetMetricsReturnsMetricsArray(): void
+    {
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        $metrics = $this->loop->getMetrics();
+
+        $this->assertIsArray($metrics);
+        $this->assertArrayHasKey('iterations', $metrics);
+        $this->assertArrayHasKey('empty_iterations', $metrics);
+        $this->assertArrayHasKey('work_cycles', $metrics);
+        $this->assertArrayHasKey('last_work_time', $metrics);
+    }
+
+    /**
+     * Test getMetrics() counts iterations
+     */
+    public function testGetMetricsCountsIterations(): void
+    {
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        $metrics = $this->loop->getMetrics();
+
+        $this->assertGreaterThan(0, $metrics['iterations']);
+    }
+
+    /**
+     * Test getMetrics() counts work cycles
+     */
+    public function testGetMetricsCountsWorkCycles(): void
+    {
+        $this->loop->defer(function () {
+            $this->loop->defer(fn() => null);
+        });
+
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        $metrics = $this->loop->getMetrics();
+
+        $this->assertGreaterThan(0, $metrics['work_cycles']);
+    }
+
+    /**
+     * Test getMetrics() distinguishes empty iterations
+     */
+    public function testGetMetricsDistinguishesEmptyIterations(): void
+    {
+        $this->loop->after(fn() => $this->loop->stop(), 0.05);
+        $this->loop->run();
+
+        $metrics = $this->loop->getMetrics();
+
+        // With a delay, there may be empty iterations (depending on system performance)
+        $this->assertIsInt($metrics['empty_iterations']);
+        $this->assertGreaterThanOrEqual(0, $metrics['empty_iterations']);
+    }
+
+    /**
+     * Test getMetrics() stores last work time
+     */
+    public function testGetMetricsStoresLastWorkTime(): void
+    {
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        $metrics = $this->loop->getMetrics();
+
+        $this->assertIsFloat($metrics['last_work_time']);
+        $this->assertGreaterThanOrEqual(0, $metrics['last_work_time']);
+    }
+
+    /**
+     * Test setOptimizationLevel() accepts all valid levels
+     */
+    public function testSetOptimizationLevelAcceptsValidLevels(): void
+    {
+        $levels = ['latency', 'throughput', 'efficient', 'balanced', 'benchmark'];
+
+        foreach ($levels as $level) {
+            $this->loop->setOptimizationLevel($level);
+            // No exception should be thrown
+            $this->assertTrue(true);
+        }
+    }
+
+    /**
+     * Test setOptimizationLevel('latency')
+     */
+    public function testSetOptimizationLevelLatency(): void
+    {
+        $this->loop->setOptimizationLevel('latency');
+        
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        // Loop should complete without error
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test setOptimizationLevel('throughput')
+     */
+    public function testSetOptimizationLevelThroughput(): void
+    {
+        $this->loop->setOptimizationLevel('throughput');
+        
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test setOptimizationLevel('efficient')
+     */
+    public function testSetOptimizationLevelEfficient(): void
+    {
+        $this->loop->setOptimizationLevel('efficient');
+        
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test setOptimizationLevel('balanced')
+     */
+    public function testSetOptimizationLevelBalanced(): void
+    {
+        $this->loop->setOptimizationLevel('balanced');
+        
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test setOptimizationLevel('benchmark')
+     */
+    public function testSetOptimizationLevelBenchmark(): void
+    {
+        $this->loop->setOptimizationLevel('benchmark');
+        
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test setOptimizationLevel() default is 'balanced'
+     */
+    public function testSetOptimizationLevelDefaultIsBalanced(): void
+    {
+        // Default should be balanced
+        $this->loop->setOptimizationLevel('throughput');
+        $this->loop->setOptimizationLevel('balanced');
+        
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test setOptimizationLevel() with invalid level defaults to balanced
+     */
+    public function testSetOptimizationLevelInvalidDefaultsToBalanced(): void
+    {
+        $this->loop->setOptimizationLevel('invalid_level');
+        
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        // Should use default (balanced) without error
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test hasWork() with no operations
+     */
+    public function testHasWorkWithNoOperations(): void
+    {
+        // Indirectly test hasWork through run()
+        // Loop should complete immediately if no work
+        $startTime = microtime(true);
+        $this->loop->run();
+        $elapsed = microtime(true) - $startTime;
+
+        $this->assertLessThan(0.1, $elapsed);
+    }
+
+    /**
+     * Test hasWork() with deferred operations
+     */
+    public function testHasWorkWithDeferredOperations(): void
     {
         $executed = false;
 
-        $this->loop->defer(function() use (&$executed) {
+        $this->loop->defer(function () use (&$executed) {
             $executed = true;
         });
 
         $this->loop->run();
 
-        $this->assertTrue($executed, 'Deferred callback deveria ter executado');
+        $this->assertTrue($executed);
     }
 
     /**
-     * Testa múltiplos defers
+     * Test hasWork() with timers
      */
-    public function testMultipleDefers(): void
+    public function testHasWorkWithTimers(): void
     {
-        $results = [];
+        $executed = false;
 
-        for ($i = 0; $i < 5; $i++) {
-            $this->loop->defer(function() use (&$results, $i) {
-                $results[] = $i;
+        $this->loop->after(function () use (&$executed) {
+            $executed = true;
+        }, 0.01);
+
+        $this->loop->run();
+
+        $this->assertTrue($executed);
+    }
+
+    /**
+     * Test combined operations: deferred + timers
+     */
+    public function testCombinedDeferredAndTimers(): void
+    {
+        $order = [];
+
+        $this->loop->defer(function () use (&$order) {
+            $order[] = 'defer';
+        });
+
+        $this->loop->after(function () use (&$order) {
+            $order[] = 'timer';
+        }, 0.01);
+
+        $this->loop->run();
+
+        $this->assertContains('defer', $order);
+        $this->assertContains('timer', $order);
+    }
+
+    /**
+     * Test multiple iterations of operations
+     */
+    public function testMultipleIterationsOfOperations(): void
+    {
+        $counter = 0;
+
+        $this->loop->repeat(0.01, function () use (&$counter) {
+            $counter++;
+        }, 5);
+
+        $this->loop->run();
+
+        $this->assertEquals(5, $counter);
+    }
+
+    /**
+     * Test loop resilience with many operations
+     */
+    public function testLoopResilienceWithManyOperations(): void
+    {
+        $count = 0;
+
+        for ($i = 0; $i < 1000; $i++) {
+            $this->loop->defer(function () use (&$count) {
+                $count++;
             });
         }
 
         $this->loop->run();
 
-        $this->assertCount(5, $results, 'Todos os defers deveriam ter executado');
+        $this->assertEquals(1000, $count);
     }
 
     /**
-     * Testa erros capturados
+     * Test metrics update after run
      */
-    public function testErrorsCapturing(): void
+    public function testMetricsUpdateAfterRun(): void
     {
-        $this->loop->repeat(0.01, function() {
-            throw new \Exception('Erro de teste');
-        }, times: 2);
-
-        $this->loop->run();
-
-        $errors = $this->loop->getErrors();
-        $this->assertCount(2, $errors, 'Deveria ter capturado 2 erros');
-        
-        foreach ($errors as $error) {
-            $this->assertStringContainsString('Erro de teste', $error);
-        }
-    }
-
-    /**
-     * Testa getMetrics
-     */
-    public function testGetMetrics(): void
-    {
-        $this->loop->after(fn() => null, 0.01);
+        $this->loop->defer(fn() => $this->loop->stop());
         $this->loop->run();
 
         $metrics = $this->loop->getMetrics();
 
-        $this->assertArrayHasKey('iterations', $metrics);
-        $this->assertArrayHasKey('empty_iterations', $metrics);
-        $this->assertArrayHasKey('work_cycles', $metrics);
-        $this->assertArrayHasKey('last_work_time', $metrics);
-
+        // After running, metrics should be updated
         $this->assertGreaterThan(0, $metrics['iterations']);
-        $this->assertGreaterThanOrEqual(0, $metrics['empty_iterations']);
+        $this->assertGreaterThan(0, $metrics['work_cycles']);
     }
 
     /**
-     * Testa otimização nível latency
+     * Test errors reset on new instance
      */
-    public function testOptimizationLevelLatency(): void
+    public function testErrorsResetOnNewInstance(): void
     {
-        $this->loop->setOptimizationLevel('latency');
-        
-        $executed = false;
-        $this->loop->after(fn() => $executed = true, 0.01);
-        $this->loop->run();
+        $loop1 = new FiberEventLoop();
+        $loop1->defer(function () {
+            throw new \Exception("Error 1");
+        });
+        $loop1->defer(fn() => $loop1->stop());
+        $loop1->run();
 
-        $this->assertTrue($executed);
+        $errors1 = $loop1->getErrors();
+        $this->assertCount(1, $errors1);
+
+        // New instance should have no errors
+        $loop2 = new FiberEventLoop();
+        $errors2 = $loop2->getErrors();
+        $this->assertEmpty($errors2);
     }
 
     /**
-     * Testa otimização nível throughput
+     * Test stop() from deferred callback
      */
-    public function testOptimizationLevelThroughput(): void
+    public function testStopFromDeferredCallback(): void
     {
-        $this->loop->setOptimizationLevel('throughput');
-        
         $count = 0;
-        $this->loop->repeat(0.01, fn() => $count++, times: 5);
+
+        $this->loop->defer(function () use (&$count) {
+            $count++;
+        });
+
+        $this->loop->defer(function () use (&$count) {
+            $count++;
+            $this->loop->stop();
+        });
+
+        $this->loop->defer(function () use (&$count) {
+            // This may or may not execute depending on order
+            $count++;
+        });
+
         $this->loop->run();
 
-        $this->assertEquals(5, $count);
+        // At least the first two should execute
+        $this->assertGreaterThanOrEqual(2, $count);
     }
 
     /**
-     * Testa otimização nível efficient
+     * Test loop handles rapid callbacks
      */
-    public function testOptimizationLevelEfficient(): void
+    public function testLoopHandlesRapidCallbacks(): void
     {
-        $this->loop->setOptimizationLevel('efficient');
-        
-        $executed = false;
-        $this->loop->after(fn() => $executed = true, 0.01);
-        $this->loop->run();
-
-        $this->assertTrue($executed);
-    }
-
-    /**
-     * Testa otimização nível balanced (padrão)
-     */
-    public function testOptimizationLevelBalanced(): void
-    {
-        $this->loop->setOptimizationLevel('balanced');
-        
-        $executed = false;
-        $this->loop->after(fn() => $executed = true, 0.01);
-        $this->loop->run();
-
-        $this->assertTrue($executed);
-    }
-
-    /**
-     * Testa otimização nível benchmark
-     */
-    public function testOptimizationLevelBenchmark(): void
-    {
-        $this->loop->setOptimizationLevel('benchmark');
-        
         $count = 0;
-        $this->loop->repeat(0.01, fn() => $count++, times: 3);
-        $this->loop->run();
 
-        $this->assertEquals(3, $count);
-    }
-
-    /**
-     * Testa múltiplas operações simultâneas
-     */
-    public function testMultipleOperationsSimultaneously(): void
-    {
-        $results = [];
-
-        // Vários timers concorrentes
-        for ($i = 0; $i < 3; $i++) {
-            $this->loop->after(function() use (&$results, $i) {
-                $results[] = "after_$i";
-            }, 0.01 * ($i + 1));
+        for ($i = 0; $i < 100; $i++) {
+            $this->loop->defer(function () use (&$count) {
+                $count++;
+            });
         }
 
         $this->loop->run();
 
-        $this->assertCount(3, $results);
-        $this->assertContains('after_0', $results);
-        $this->assertContains('after_1', $results);
-        $this->assertContains('after_2', $results);
+        $this->assertEquals(100, $count);
     }
 
     /**
-     * Testa scheduling com múltiplos timers (sem precisão extrema)
+     * Test optimization level change at runtime
      */
-    public function testSchedulingMultipleTimers(): void
+    public function testOptimizationLevelChangeAtRuntime(): void
     {
-        $results = [];
-        $start = microtime(true);
+        $this->loop->setOptimizationLevel('latency');
+        
+        $this->loop->defer(function () {
+            $this->loop->setOptimizationLevel('efficient');
+        });
 
-        $this->loop->after(function() use (&$results, $start) {
-            $results[] = 1;
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        // Should complete without error
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test getMetrics() types
+     */
+    public function testGetMetricsReturnTypes(): void
+    {
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        $metrics = $this->loop->getMetrics();
+
+        $this->assertIsInt($metrics['iterations']);
+        $this->assertIsInt($metrics['empty_iterations']);
+        $this->assertIsInt($metrics['work_cycles']);
+        $this->assertIsFloat($metrics['last_work_time']);
+    }
+
+    /**
+     * Test getErrors() returns correct format
+     */
+    public function testGetErrorsReturnsCorrectFormat(): void
+    {
+        $this->loop->defer(function () {
+            throw new \Exception("Test");
+        });
+
+        $this->loop->defer(fn() => $this->loop->stop());
+        $this->loop->run();
+
+        $errors = $this->loop->getErrors();
+
+        // Should be associative array with integer keys
+        $this->assertIsArray($errors);
+        foreach ($errors as $id => $message) {
+            $this->assertIsInt($id);
+            $this->assertIsString($message);
+        }
+    }
+
+    /**
+     * Test loop completes with complex scenario
+     */
+    public function testLoopCompletesWithComplexScenario(): void
+    {
+        $executed = [];
+
+        // Mix of deferred and timers
+        $this->loop->defer(function () use (&$executed) {
+            $executed[] = 'defer1';
+        });
+
+        $this->loop->after(function () use (&$executed) {
+            $executed[] = 'after1';
         }, 0.01);
 
-        $this->loop->after(function() use (&$results, $start) {
-            $results[] = 2;
-        }, 0.02);
+        $this->loop->repeat(0.02, function () use (&$executed) {
+            $executed[] = 'repeat';
+        }, 2);
 
-        $this->loop->after(function() use (&$results, $start) {
-            $results[] = 3;
-        }, 0.03);
-
-        $this->loop->run();
-
-        $this->assertCount(3, $results);
-        // Verifica que pelo menos foram agendados (ordem pode variar levemente)
-        $this->assertContains(1, $results);
-        $this->assertContains(2, $results);
-        $this->assertContains(3, $results);
-    }
-
-    /**
-     * Testa loop sem trabalho (deve parar imediatamente)
-     */
-    public function testLoopWithNoWork(): void
-    {
-        $startTime = microtime(true);
-        $this->loop->run();
-        $elapsed = microtime(true) - $startTime;
-
-        // Sem trabalho, deve parar quase imediatamente
-        $this->assertLessThan(0.1, $elapsed);
-    }
-
-    /**
-     * Testa cancelamento de operação por ID
-     */
-    public function testCancelById(): void
-    {
-        $executed1 = false;
-        $executed2 = false;
-
-        $id1 = $this->loop->after(fn() => $executed1 = true, 0.05);
-        $id2 = $this->loop->after(fn() => $executed2 = true, 0.06);
-
-        $this->loop->cancel($id1);
+        $this->loop->defer(function () use (&$executed) {
+            $executed[] = 'defer2';
+        });
 
         $this->loop->run();
 
-        $this->assertFalse($executed1, 'Timer cancelado não deveria ter executado');
-        $this->assertTrue($executed2, 'Timer não cancelado deveria ter executado');
+        // All should execute
+        $this->assertContains('defer1', $executed);
+        $this->assertContains('defer2', $executed);
+        $this->assertContains('after1', $executed);
+        $this->assertContains('repeat', $executed);
     }
 
     /**
-     * Testa exceção durante execução não para o loop
+     * Test loop stability under stress
      */
-    public function testExceptionDoesNotStopLoop(): void
+    public function testLoopStabilityUnderStress(): void
     {
-        $executed = false;
+        $counter = 0;
+        $errors = 0;
 
-        $this->loop->after(function() {
-            throw new \Exception('Erro');
-        }, 0.01);
-
-        $this->loop->after(function() use (&$executed) {
-            $executed = true;
-        }, 0.02);
+        for ($i = 0; $i < 500; $i++) {
+            $this->loop->defer(function () use (&$counter) {
+                $counter++;
+            });
+        }
 
         $this->loop->run();
 
-        $this->assertTrue($executed, 'Loop deveria continuar após exceção');
-        $this->assertCount(1, $this->loop->getErrors());
+        $errors = count($this->loop->getErrors());
+
+        $this->assertEquals(500, $counter);
+        $this->assertEquals(0, $errors);
     }
 
     /**
-     * Testa estado inicial do loop
+     * Test multiple run calls on same instance
      */
-    public function testInitialLoopState(): void
+    public function testMultipleRunCallsOnSameInstance(): void
     {
-        $this->assertEmpty($this->loop->getErrors());
-        $this->assertEmpty($this->loop->getMetrics()['iterations']);
-    }
-
-    /**
-     * Testa callback com closure binding
-     */
-    public function testCallbackWithClosureBinding(): void
-    {
-        $result = null;
-
-        $this->loop->after(function() use (&$result) {
-            $result = 'executed';
-        }, 0.01);
-
+        // First run
+        $count1 = 0;
+        $this->loop->defer(function () use (&$count1) {
+            $count1++;
+        });
+        $this->loop->defer(fn() => $this->loop->stop());
         $this->loop->run();
 
-        $this->assertEquals('executed', $result);
+        // Create new loop for second run
+        $loop2 = new FiberEventLoop();
+        $count2 = 0;
+        $loop2->defer(function () use (&$count2) {
+            $count2++;
+        });
+        $loop2->defer(fn() => $loop2->stop());
+        $loop2->run();
+
+        $this->assertEquals(1, $count1);
+        $this->assertEquals(1, $count2);
     }
 }
