@@ -47,6 +47,7 @@ trait StreamManagerTrait
     public function listen(mixed $server, callable $callback): int
     {
         $this->validateStream($server);
+        $this->configureStream($server);
         $this->configureSocket($server);
 
         $id = $this->generateId();
@@ -75,6 +76,22 @@ trait StreamManagerTrait
     }
 
     /**
+     * @param resource $stream
+     * @return void
+     */
+    protected function configureStream(mixed $stream): void
+    {
+        if (!is_resource($stream)) {
+            return;
+        }
+
+        stream_set_blocking($stream, false);
+        stream_set_timeout($stream, 0);
+        stream_set_read_buffer($stream, $this->defaultBufferSize);
+        stream_set_write_buffer($stream, $this->defaultBufferSize);
+    }
+
+    /**
      * Configura socket para máxima performance
      *
      * @param resource $stream
@@ -82,31 +99,38 @@ trait StreamManagerTrait
      */
     protected function configureSocket(mixed $stream): void
     {
-        if (!is_resource($stream)) {
+        if (!$this->isSocketStream($stream)) {
             return;
         }
 
-        // Non-blocking obrigatório
-        stream_set_blocking($stream, false);
-
-        // Buffer TCP otimizado
-        stream_set_read_buffer($stream, $this->defaultBufferSize);
-        stream_set_write_buffer($stream, $this->defaultBufferSize);
-
-        // Timeout zero para non-blocking
-        stream_set_timeout($stream, 0);
-
         // Opções de socket para performance
-        if (function_exists('socket_import_stream')) {
-            $socket = socket_import_stream($stream);
-            if ($socket !== false) {
-                @socket_set_option($socket, SOL_SOCKET, SO_KEEPALIVE, 1);
-                @socket_set_option($socket, SOL_TCP, TCP_NODELAY, 1);
-                @socket_set_option($socket, SOL_SOCKET, SO_RCVBUF, $this->defaultBufferSize);
-                @socket_set_option($socket, SOL_SOCKET, SO_SNDBUF, $this->defaultBufferSize);
-            }
+        $socket = socket_import_stream($stream);
+        if ($socket !== false) {
+            @socket_set_option($socket, SOL_SOCKET, SO_KEEPALIVE, 1);
+            @socket_set_option($socket, SOL_TCP, TCP_NODELAY, 1);
+            @socket_set_option($socket, SOL_SOCKET, SO_RCVBUF, $this->defaultBufferSize);
+            @socket_set_option($socket, SOL_SOCKET, SO_SNDBUF, $this->defaultBufferSize);
         }
     }
+
+    /**
+     * @param resource $stream
+     * @return bool
+     */
+    protected function isSocketStream(mixed $stream): bool
+    {
+        $meta = stream_get_meta_data($stream);
+
+        // Exemplos de wrapper: tcp, udp, unix
+        if (!isset($meta['stream_type'])) {
+            return false;
+        }
+
+        return str_contains($meta['stream_type'], 'tcp')
+            || str_contains($meta['stream_type'], 'udp')
+            || str_contains($meta['stream_type'], 'unix');
+    }
+
 
     /**
      * @param resource $stream
@@ -117,6 +141,7 @@ trait StreamManagerTrait
     public function onReadable(mixed $stream, callable $callback, int $length = 65536): int
     {
         $this->validateStream($stream);
+        $this->configureStream($stream);
         $this->configureSocket($stream);
 
         $id = $this->generateId();
@@ -139,6 +164,7 @@ trait StreamManagerTrait
     public function onWritable(mixed $stream, string $data, callable $callback): int
     {
         $this->validateStream($stream);
+        $this->configureStream($stream);
         $this->configureSocket($stream);
 
         $id = $this->generateId();
