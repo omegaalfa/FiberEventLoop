@@ -501,4 +501,59 @@ class TimerManagerTraitTest extends TestCase
 
         $this->assertFalse($executed);
     }
+
+    /**
+     * Test after() rejects negative delay
+     */
+    public function testAfterRejectsNegativeDelay(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('seconds must be greater than or equal to 0');
+
+        $this->loop->after(fn() => null, -0.01);
+    }
+
+    /**
+     * Test setInterval() rejects negative interval
+     */
+    public function testSetIntervalRejectsNegativeInterval(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('seconds must be greater than or equal to 0');
+
+        $this->loop->setInterval(-0.01, fn() => null);
+    }
+
+    /**
+     * Test repeat() rejects negative interval
+     */
+    public function testRepeatRejectsNegativeInterval(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('interval must be greater than or equal to 0');
+
+        $this->loop->repeat(-0.01, fn() => null);
+    }
+
+    /**
+     * Test repeat() rejects negative times
+     */
+    public function testRepeatRejectsNegativeTimes(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('times must be greater than or equal to 0');
+
+        $this->loop->repeat(0.01, fn() => null, -1);
+    }
+
+    /**
+     * Test sleep() rejects negative duration
+     */
+    public function testSleepRejectsNegativeDuration(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('seconds must be greater than or equal to 0');
+
+        $this->loop->sleep(-0.01);
+    }
 }

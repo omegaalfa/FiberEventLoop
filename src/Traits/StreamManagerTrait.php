@@ -99,17 +99,34 @@ trait StreamManagerTrait
      */
     protected function configureSocket(mixed $stream): void
     {
+        if (!is_resource($stream)) {
+            return;
+        }
+
+        // 1. CONFIGURAÇÃO DE CAMADA DE STREAM (Sempre funciona)
+        // Isso garante que o seu FiberEventLoop não trave, independente do socket_import
+        stream_set_blocking($stream, false);
+        stream_set_read_buffer($stream, $this->defaultBufferSize);
+        stream_set_write_buffer($stream, $this->defaultBufferSize);
+        stream_set_timeout($stream, 0);
+
+        // 2. FILTRO DE SEGURANÇA (Evita o erro de STDIO que você viu)
         if (!$this->isSocketStream($stream)) {
             return;
         }
 
-        // Opções de socket para performance
-        $socket = socket_import_stream($stream);
-        if ($socket !== false) {
-            @socket_set_option($socket, SOL_SOCKET, SO_KEEPALIVE, 1);
-            @socket_set_option($socket, SOL_TCP, TCP_NODELAY, 1);
-            @socket_set_option($socket, SOL_SOCKET, SO_RCVBUF, $this->defaultBufferSize);
-            @socket_set_option($socket, SOL_SOCKET, SO_SNDBUF, $this->defaultBufferSize);
+        // 3. OTIMIZAÇÃO DE BAIXO NÍVEL (Camada de Kernel)
+        if (function_exists('socket_import_stream')) {
+            $socket = @socket_import_stream($stream);
+            if ($socket !== false) {
+                // TCP_NODELAY é vital para trading (desativa algoritmo de Nagle)
+                @socket_set_option($socket, SOL_TCP, TCP_NODELAY, 1);
+                @socket_set_option($socket, SOL_SOCKET, SO_KEEPALIVE, 1);
+
+                // Sintoniza buffers no nível do Sistema Operacional
+                @socket_set_option($socket, SOL_SOCKET, SO_RCVBUF, $this->defaultBufferSize);
+                @socket_set_option($socket, SOL_SOCKET, SO_SNDBUF, $this->defaultBufferSize);
+            }
         }
     }
 
@@ -229,10 +246,12 @@ trait StreamManagerTrait
      *
      * @return void
      */
-    protected function execAcceptStreams(): void
+    protected function execAcceptStreams(): int
     {
+        $processed = 0;
+
         if (empty($this->acceptStreams)) {
-            return;
+            return $processed;
         }
 
         $servers = [];
@@ -245,7 +264,7 @@ trait StreamManagerTrait
         }
 
         if (empty($servers)) {
-            return;
+            return $processed;
         }
 
         // Processa cada server
@@ -264,18 +283,22 @@ trait StreamManagerTrait
                     break; // Não há mais conexões pendentes
                 }
 
+                $accepted++;
+                $processed++;
+
                 // Configura o cliente imediatamente
                 $this->configureSocket($client);
 
                 try {
                     $this->acceptStreams[$id]['callback']($client);
-                    $accepted++;
                 } catch (Throwable $exception) {
                     $this->errors[$id] = $exception->getMessage();
                     @fclose($client);
                 }
             }
         }
+
+        return $processed;
     }
 
     /**
@@ -283,10 +306,12 @@ trait StreamManagerTrait
      *
      * @return void
      */
-    protected function execReadStreams(): void
+    protected function execReadStreams(): int
     {
+        $processed = 0;
+
         if (empty($this->readStreams)) {
-            return;
+            return $processed;
         }
 
         $streams = [];
@@ -299,7 +324,7 @@ trait StreamManagerTrait
         }
 
         if (empty($streams)) {
-            return;
+            return $processed;
         }
 
         // Limita streams para evitar overhead do select
@@ -313,7 +338,7 @@ trait StreamManagerTrait
         $result = @stream_select($read, $write, $except, 0, 0);
 
         if ($result === false || $result === 0 || empty($read)) {
-            return;
+            return $processed;
         }
 
         // Processa streams prontos
@@ -332,6 +357,7 @@ trait StreamManagerTrait
                     if (feof($stream)) {
                         $this->readStreams[$id]['callback']('');
                         unset($this->readStreams[$id]);
+                        $processed++;
                     }
                     continue;
                 }
@@ -341,6 +367,7 @@ trait StreamManagerTrait
                     if (feof($stream)) {
                         $this->readStreams[$id]['callback']('');
                         unset($this->readStreams[$id]);
+                        $processed++;
                     }
                     continue;
                 }
@@ -351,12 +378,15 @@ trait StreamManagerTrait
                 // Callback com dados acumulados
                 $this->readStreams[$id]['callback']($this->readStreams[$id]['buffer']);
                 $this->readStreams[$id]['buffer'] = ''; // Limpa buffer após callback
+                $processed++;
 
             } catch (Throwable $exception) {
                 $this->errors[$id] = $exception->getMessage();
                 unset($this->readStreams[$id]);
             }
         }
+
+        return $processed;
     }
 
     /**
@@ -364,10 +394,12 @@ trait StreamManagerTrait
      *
      * @return void
      */
-    protected function execWriteStreams(): void
+    protected function execWriteStreams(): int
     {
+        $processed = 0;
+
         if (empty($this->writeStreams)) {
-            return;
+            return $processed;
         }
 
         $streams = [];
@@ -380,7 +412,7 @@ trait StreamManagerTrait
         }
 
         if (empty($streams)) {
-            return;
+            return $processed;
         }
 
         $read = $except = [];
@@ -389,7 +421,7 @@ trait StreamManagerTrait
         $result = @stream_select($read, $write, $except, 0, 0);
 
         if ($result === false || $result === 0 || empty($write)) {
-            return;
+            return $processed;
         }
 
         // Processa escritas
@@ -408,6 +440,7 @@ trait StreamManagerTrait
                         strlen($this->writeStreams[$id]['data'])
                     );
                     unset($this->writeStreams[$id]);
+                    $processed++;
                     continue;
                 }
 
@@ -424,6 +457,7 @@ trait StreamManagerTrait
                 }
 
                 $this->writeStreams[$id]['written'] += $written;
+                $processed++;
 
                 // Callback de progresso
                 $this->writeStreams[$id]['callback'](
@@ -441,5 +475,7 @@ trait StreamManagerTrait
                 unset($this->writeStreams[$id]);
             }
         }
+
+        return $processed;
     }
 }

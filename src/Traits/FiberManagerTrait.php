@@ -61,7 +61,8 @@ trait FiberManagerTrait
             $this->deferred[$id],
             $this->timers[$id],
             $this->acceptStreams[$id],
-            $this->readStreams[$id]
+            $this->readStreams[$id],
+            $this->writeStreams[$id]
         );
     }
 
@@ -94,10 +95,12 @@ trait FiberManagerTrait
     /**
      * @return void
      */
-    protected function execFibers(): void
+    protected function execFibers(): int
     {
+        $processed = 0;
+
         if (empty($this->fibers)) {
-            return;
+            return $processed;
         }
 
         foreach ($this->fibers as $id => $fiber) {
@@ -109,8 +112,10 @@ trait FiberManagerTrait
             try {
                 if (!$fiber->isStarted()) {
                     $fiber->start($id);
+                    $processed++;
                 } elseif ($fiber->isSuspended()) {
                     $fiber->resume();
+                    $processed++;
                 }
 
                 if ($fiber->isTerminated()) {
@@ -122,6 +127,8 @@ trait FiberManagerTrait
                 unset($this->fibers[$id]);
             }
         }
+
+        return $processed;
     }
 
     /**
@@ -136,10 +143,12 @@ trait FiberManagerTrait
     /**
      * @return void
      */
-    protected function execDeferred(): void
+    protected function execDeferred(): int
     {
+        $processed = 0;
+
         if (empty($this->deferred)) {
-            return;
+            return $processed;
         }
 
         $callbacks = $this->deferred;
@@ -152,9 +161,13 @@ trait FiberManagerTrait
 
             try {
                 $callback();
+                $processed++;
             } catch (Throwable $exception) {
                 $this->errors[$id] = $exception->getMessage();
+                $processed++;
             }
         }
+
+        return $processed;
     }
 }

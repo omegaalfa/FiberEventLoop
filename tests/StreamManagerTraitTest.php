@@ -352,9 +352,8 @@ class StreamManagerTraitTest extends TestCase
             $this->loop->defer(fn() => $this->loop->stop());
             $this->loop->run();
 
-            // Callback may or may not be called depending on timing
-            // Just verify no errors occur
-            $this->assertTrue(true);
+            // With eager cancellation, callback should never be called.
+            $this->assertFalse($callbackCalled);
         } finally {
             fclose($stream);
             unlink($tempfile);

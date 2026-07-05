@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Omegaalfa\FiberEventLoop\Traits;
 
+use InvalidArgumentException;
 use Throwable;
 
 /**
@@ -64,10 +65,11 @@ trait TimerManagerTrait
      */
     public function after(callable $callback, float|int $seconds): int
     {
+        $delay = $this->normalizeDuration($seconds, 'seconds');
         $id = $this->generateId();
 
         $this->timers[$id] = [
-            'time' => microtime(true) + (float) $seconds,
+            'time' => microtime(true) + $delay,
             'callback' => $callback,
         ];
 
@@ -97,12 +99,13 @@ trait TimerManagerTrait
      */
     public function setInterval(float $seconds, callable $callback): int
     {
+        $interval = $this->normalizeDuration($seconds, 'seconds');
         $id = $this->generateId();
 
         $this->timers[$id] = [
-            'time' => microtime(true) + $seconds,
+            'time' => microtime(true) + $interval,
             'callback' => $callback,
-            'interval' => $seconds,
+            'interval' => $interval,
         ];
 
         return $id;
@@ -136,14 +139,20 @@ trait TimerManagerTrait
      */
     public function repeat(float|int $interval, callable $callback, ?int $times = null): int
     {
+        $intervalSeconds = $this->normalizeDuration($interval, 'interval');
+
+        if ($times !== null && $times < 0) {
+            throw new InvalidArgumentException('times must be greater than or equal to 0');
+        }
+
         $id = $this->generateId();
         $count = 0;
 
         $this->timers[$id] = [
-            'time' => microtime(true) + (float) $interval,
+            'time' => microtime(true) + $intervalSeconds,
             'callback' => function () use (
                 $callback,
-                $interval,
+                $intervalSeconds,
                 $times,
                 &$count,
                 $id
@@ -157,9 +166,9 @@ trait TimerManagerTrait
                 $count++;
 
                 // Reagenda para próximo intervalo
-                $this->timers[$id]['time'] = microtime(true) + (float) $interval;
+                $this->timers[$id]['time'] = microtime(true) + $intervalSeconds;
             },
-            'interval' => (float) $interval,
+            'interval' => $intervalSeconds,
         ];
 
         return $id;
@@ -214,13 +223,14 @@ trait TimerManagerTrait
      */
     public function sleep(float|int $seconds): void
     {
+        $delay = $this->normalizeDuration($seconds, 'seconds');
         $done = false;
 
         $this->after(
             function () use (&$done) {
                 $done = true;
             },
-            $seconds
+            $delay
         );
 
         // Coopera com o loop
@@ -239,10 +249,12 @@ trait TimerManagerTrait
      * 
      * @return void
      */
-    protected function execTimers(): void
+    protected function execTimers(): int
     {
+        $processed = 0;
+
         if (!$this->timers) {
-            return;
+            return $processed;
         }
 
         $now = microtime(true);
@@ -259,8 +271,10 @@ trait TimerManagerTrait
 
             try {
                 ($timer['callback'])();
+                $processed++;
             } catch (Throwable $e) {
                 $this->errors[$id] = $e->getMessage();
+                $processed++;
             }
 
             if (isset($timer['interval'])) {
@@ -272,6 +286,26 @@ trait TimerManagerTrait
         }
 
         unset($timer); // Quebra referência
+
+        return $processed;
+    }
+
+    /**
+     * @param float|int $seconds
+     * @param string $parameterName
+     * @return float
+     */
+    protected function normalizeDuration(float|int $seconds, string $parameterName): float
+    {
+        if (is_float($seconds) && !is_finite($seconds)) {
+            throw new InvalidArgumentException("$parameterName must be a finite number");
+        }
+
+        if ($seconds < 0) {
+            throw new InvalidArgumentException("$parameterName must be greater than or equal to 0");
+        }
+
+        return (float) $seconds;
     }
 
     /**
