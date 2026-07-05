@@ -190,16 +190,16 @@ php load_test_optimized.php --webhooks=5000 | grep "Rate: [0-4][0-9][0-9]/s"
 ## 🎓 Aprender Mais
 
 📚 **Leia primeiro:**
-1. [LOAD_TEST_README.md](./LOAD_TEST_README.md) - Visão geral e exemplos
-2. [LOAD_TESTING.md](./LOAD_TESTING.md) - Guia detalhado
+1. [LOAD_TEST_README.md](LOAD_TEST_README.md) - Visão geral e exemplos
+2. [LOAD_TESTING.md](LOAD_TESTING.md) - Guia detalhado
 
 📊 **Depois analise:**
-1. [LOAD_TEST_EXAMPLES.md](./LOAD_TEST_EXAMPLES.md) - Resultados reais
+1. [LOAD_TEST_EXAMPLES.md](LOAD_TEST_EXAMPLES.md) - Resultados reais
 
 🔗 **Relacionado:**
-- [README.md](./README.md) - FiberEventLoop overview
-- [TESTING.md](./TESTING.md) - Unit tests
-- [TESTING_GUIDE.md](./TESTING_GUIDE.md) - Best practices
+- [README.md](../README.md) - FiberEventLoop overview
+- [TESTING.md](TESTING.md) - Unit tests
+- [TESTING_GUIDE.md](TESTING_GUIDE.md) - Best practices
 
 ---
 

@@ -311,14 +311,14 @@ load_test:
 ## 📞 Support
 
 For issues or questions:
-1. Check [LOAD_TESTING.md](./LOAD_TESTING.md) for detailed guide
-2. Review [README.md](./README.md) for FiberEventLoop documentation
+1. Check [LOAD_TESTING.md](LOAD_TESTING.md) for detailed guide
+2. Review [README.md](../README.md) for FiberEventLoop documentation
 3. Run with `--verbose` flag for detailed output
 4. Check test files in `tests/` directory
 
 ## 📝 Related Documentation
 
-- [LOAD_TESTING.md](./LOAD_TESTING.md) - Comprehensive testing guide
-- [TESTING.md](./TESTING.md) - Unit test documentation
-- [README.md](./README.md) - FiberEventLoop overview
-- [TESTING_GUIDE.md](./TESTING_GUIDE.md) - Testing best practices
+- [LOAD_TESTING.md](LOAD_TESTING.md) - Comprehensive testing guide
+- [TESTING.md](TESTING.md) - Unit test documentation
+- [README.md](../README.md) - FiberEventLoop overview
+- [TESTING_GUIDE.md](TESTING_GUIDE.md) - Testing best practices

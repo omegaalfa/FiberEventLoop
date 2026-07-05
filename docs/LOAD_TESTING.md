@@ -341,6 +341,6 @@ echo "All tests completed!"
 
 ## Referências
 
-- [FiberEventLoop Documentation](./README.md)
-- [TESTING.md](./TESTING.md) - Testes unitários
+- [FiberEventLoop Documentation](../README.md)
+- [TESTING.md](TESTING.md) - Testes unitários
 - [PHPUnit Configuration](./phpunit.xml.dist)
