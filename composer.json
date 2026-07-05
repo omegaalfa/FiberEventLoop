@@ -22,13 +22,9 @@
   ],
   "require": {
     "php": ">=8.2",
-    "ext-sockets": "*",
-    "react/event-loop": "3.x-dev"
+    "ext-sockets": "*"
   },
   "autoload": {
-    "files": [
-      "src/Http/functions.php"
-    ],
     "psr-4": {
       "Omegaalfa\\FiberEventLoop\\": "src/"
     }
