@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Omegaalfa\FiberEventLoop\Traits;
 
 use Fiber;
+use Omegaalfa\FiberEventLoop\Future;
 use Throwable;
 
 trait FiberManagerTrait
@@ -38,6 +39,26 @@ trait FiberManagerTrait
         $id = $this->generateId();
         $this->deferred[$id] = $callable;
         return $id;
+    }
+
+    /**
+     * @param callable $callable
+     * @return Future
+     */
+    public function async(callable $callable): Future
+    {
+        $future = new Future($this);
+
+        $this->deferFiber(function (int $id) use ($callable, $future) {
+            try {
+                $future->resolve($callable());
+            } catch (Throwable $exception) {
+                $this->errors[$id] = $exception->getMessage();
+                $future->reject($exception);
+            }
+        });
+
+        return $future;
     }
 
     /**

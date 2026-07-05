@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Omegaalfa\FiberEventLoop;
 
+use Exception;
 use Omegaalfa\FiberEventLoop\Traits\FiberManagerTrait;
 use Omegaalfa\FiberEventLoop\Traits\StreamManagerTrait;
 use Omegaalfa\FiberEventLoop\Traits\TimerManagerTrait;
@@ -226,35 +227,7 @@ class FiberEventLoop
             $hadWork = false;
             $startTime = microtime(true);
 
-            // PRIORIDADE 1: Accept streams (crítico para conexões)
-            if (!empty($this->acceptStreams)) {
-                $hadWork = $this->execAcceptStreams() > 0 || $hadWork;
-            }
-
-            // PRIORIDADE 2: Read streams (dados chegando)
-            if (!empty($this->readStreams)) {
-                $hadWork = $this->execReadStreams() > 0 || $hadWork;
-            }
-
-            // PRIORIDADE 3: Write streams (dados saindo)
-            if (!empty($this->writeStreams)) {
-                $hadWork = $this->execWriteStreams() > 0 || $hadWork;
-            }
-
-            // PRIORIDADE 4: Fibers (processamento)
-            if (!empty($this->fibers)) {
-                $hadWork = $this->execFibers() > 0 || $hadWork;
-            }
-
-            // PRIORIDADE 5: Timers (menos crítico)
-            if (!empty($this->timers)) {
-                $hadWork = $this->execTimers() > 0 || $hadWork;
-            }
-
-            // PRIORIDADE 6: Deferred (menos crítico)
-            if (!empty($this->deferred)) {
-                $hadWork = $this->execDeferred() > 0 || $hadWork;
-            }
+            $hadWork = $this->processPrioritizedWorkCycle() || $hadWork;
 
             // Gerenciamento de idle OTIMIZADO
             if ($hadWork) {

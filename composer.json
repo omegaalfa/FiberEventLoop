@@ -26,6 +26,9 @@
     "react/event-loop": "3.x-dev"
   },
   "autoload": {
+    "files": [
+      "src/Http/functions.php"
+    ],
     "psr-4": {
       "Omegaalfa\\FiberEventLoop\\": "src/"
     }
@@ -38,7 +41,6 @@
   "minimum-stability": "dev",
   "require-dev": {
     "roave/security-advisories": "dev-latest",
-    "revolt/event-loop": "^1.0@dev",
     "phpunit/phpunit": "^11.5"
   },
   "scripts": {
